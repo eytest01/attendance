@@ -68,6 +68,7 @@ label{font-size:14px;color:var(--sub);display:block;margin:12px 0 6px;font-weigh
 .week-cal .day.leave{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
 .week-cal .day.alt{background:var(--purple-soft);border-color:var(--purple);color:var(--purple)}
 .week-cal .day.sick{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.week-cal .day.half{background:var(--amber-soft);border-color:var(--amber);color:var(--amber)}
 .week-cal .day.off{background:#F1EDE7;color:var(--sub);cursor:default}
 .week-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .week-nav button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 16px;font-size:16px;cursor:pointer;font-weight:600}
@@ -101,6 +102,9 @@ table.tt th{background:#F1EDE7;font-weight:800}
 .dow-check label{display:flex;align-items:center;gap:4px;margin:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:15px;cursor:pointer;color:var(--ink)}
 .dow-check label.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:800}
 .dow-check input{display:none}
+.hour-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+.hour-grid .hd{font-size:12px;font-weight:800;color:var(--sub);margin-bottom:3px}
+.hour-grid input{padding:10px 2px;text-align:center;font-size:15px}
 .modal-bg{position:fixed;inset:0;background:rgba(30,25,20,.55);z-index:300;display:none;align-items:flex-end;justify-content:center}
 .modal-bg.show{display:flex}
 .modal{background:#fff;border-radius:20px 20px 0 0;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:20px}
@@ -197,6 +201,7 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <div class="week-cal" id="weekCal"></div>
     <div class="legend">
       <span><i style="background:var(--blue)"></i>연차</span>
+      <span><i style="background:var(--amber)"></i>반차·반반차</span>
       <span><i style="background:var(--purple)"></i>대체휴무</span>
       <span><i style="background:var(--red)"></i>병가</span>
       <span><i style="background:#D8D2C9"></i>정기휴무</span>
@@ -209,6 +214,13 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <div class="prod-input-row"><b>경주빵</b><input type="number" id="prodGyeongju" placeholder="개수" inputmode="numeric"></div>
     <div class="prod-input-row"><b>찰보리빵</b><input type="number" id="prodBori" placeholder="개수" inputmode="numeric"></div>
     <button class="btn" style="background:var(--amber);color:#fff;font-size:18px;padding:14px;margin-top:6px" onclick="saveProduction()">생산량 저장</button>
+  </div>
+
+  <div class="card task-box" style="background:var(--blue-soft)">
+    <div class="sub" style="color:var(--blue);font-weight:700;margin-bottom:10px">오늘 재고수량 입력</div>
+    <div class="prod-input-row"><b>경주빵</b><input type="number" id="stockGyeongju" placeholder="개수" inputmode="numeric"></div>
+    <div class="prod-input-row"><b>찰보리빵</b><input type="number" id="stockBori" placeholder="개수" inputmode="numeric"></div>
+    <button class="btn" style="background:var(--blue);color:#fff;font-size:18px;padding:14px;margin-top:6px" onclick="saveStock()">재고수량 저장</button>
   </div>
 
   <button class="btn btn-home" onclick="logoutEmp()">🏠 처음으로 (다음 분 기록)</button>
@@ -246,8 +258,14 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <label>생년월일</label><input id="rBirth" type="date">
     <label>입사일</label><input id="rJoin" type="date">
     <label>업무</label><select id="rTask"></select>
-    <label>휴무일 (여러 날 선택 가능)</label>
-    <div class="dow-check" id="rDaysOff"></div>
+    <label>요일별 근무시간 (빈칸 또는 0 = 휴무)</label>
+    <div class="hour-grid" id="rHours"></div>
+    <div class="sub" id="rHoursSum" style="margin-top:6px;text-align:right;font-weight:700">주 0시간</div>
+    <label>연차 계산 방식</label>
+    <select id="rUnit">
+      <option value="day">일수로 계산 (연차 1일 · 반차 0.5일 · 반반차 0.25일)</option>
+      <option value="hour">시간으로 계산 (그 요일 근무시간만큼 차감)</option>
+    </select>
     <label>비밀번호 (4자리)</label><input id="rPin" maxlength="4" placeholder="0000" inputmode="numeric">
     <div style="height:14px"></div>
     <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="registerEmp()">등록하기</button>
@@ -264,8 +282,12 @@ table.tt th{background:#F1EDE7;font-weight:800}
 
 <!-- ===== 관리자: 생산통계 ===== -->
 <div class="screen pad-bottom" id="s-adm-prod">
-  <div class="h1" style="margin-bottom:4px">생산 통계</div>
-  <div class="sub" style="margin-bottom:14px">직원이 입력한 생산량 자동 집계</div>
+  <div class="h1" style="margin-bottom:4px">생산 · 재고 통계</div>
+  <div class="sub" style="margin-bottom:14px">직원이 입력한 수량 자동 집계</div>
+  <div class="tab2" style="margin-bottom:8px">
+    <button class="on" onclick="prodSource='production';srcSel(this);renderProd();renderProdEntries()">생산량</button>
+    <button onclick="prodSource='stock';srcSel(this);renderProd();renderProdEntries()">재고수량</button>
+  </div>
   <div class="tab2">
     <button class="on" onclick="prodMode='week';prodTabSel(this);renderProd()">일자별</button>
     <button onclick="prodMode='month';prodTabSel(this);renderProd()">월별</button>
@@ -332,7 +354,14 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <label>생년월일</label><input id="eBirth" type="date">
     <label>입사일</label><input id="eJoin" type="date">
     <label>업무</label><select id="eTask"></select>
-    <label>휴무일</label><div class="dow-check" id="eDaysOff"></div>
+    <label>요일별 근무시간 (빈칸 또는 0 = 휴무)</label>
+    <div class="hour-grid" id="eHours"></div>
+    <div class="sub" id="eHoursSum" style="margin-top:6px;text-align:right;font-weight:700">주 0시간</div>
+    <label>연차 계산 방식</label>
+    <select id="eUnit">
+      <option value="day">일수로 계산 (연차 1일 · 반차 0.5일 · 반반차 0.25일)</option>
+      <option value="hour">시간으로 계산 (그 요일 근무시간만큼 차감)</option>
+    </select>
     <label>비밀번호 (4자리)</label><input id="ePin" maxlength="4" inputmode="numeric">
     <div style="height:16px"></div>
     <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="saveEmpEdit()">저장</button>
@@ -348,11 +377,13 @@ table.tt th{background:#F1EDE7;font-weight:800}
   <div class="modal">
     <div class="h2" style="text-align:center" id="mLeaveTitle">휴무 기록</div>
     <div class="sub" style="text-align:center;margin:6px 0 16px">종류를 선택해주세요</div>
-    <div class="big-grid" style="grid-template-columns:1fr">
-      <button style="color:var(--blue);border-color:var(--blue-soft);background:var(--blue-soft)" onclick="setLeave('연차')">연차</button>
-      <button style="color:var(--purple);border-color:var(--purple-soft);background:var(--purple-soft)" onclick="setLeave('대체휴무')">대체휴무</button>
-      <button style="color:var(--red);border-color:var(--red-soft);background:var(--red-soft)" onclick="setLeave('병가')">병가</button>
-      <button onclick="setLeave(null)">기록 지우기</button>
+    <div class="big-grid" style="grid-template-columns:1fr 1fr">
+      <button style="color:var(--blue);border-color:var(--blue-soft);background:var(--blue-soft);grid-column:1/-1" onclick="setLeave('연차')">연차</button>
+      <button style="color:var(--amber);border-color:var(--amber-soft);background:var(--amber-soft)" onclick="setLeave('반차')">반차</button>
+      <button style="color:var(--amber);border-color:var(--amber-soft);background:var(--amber-soft)" onclick="setLeave('반반차')">반반차</button>
+      <button style="color:var(--purple);border-color:var(--purple-soft);background:var(--purple-soft);grid-column:1/-1" onclick="setLeave('대체휴무')">대체휴무</button>
+      <button style="color:var(--red);border-color:var(--red-soft);background:var(--red-soft);grid-column:1/-1" onclick="setLeave('병가')">병가</button>
+      <button style="grid-column:1/-1" onclick="setLeave(null)">기록 지우기</button>
     </div>
     <div style="height:12px"></div>
     <button class="btn btn-home" onclick="closeModal('mLeave')">닫기</button>
@@ -366,6 +397,23 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <div class="big-grid" id="taskChangeGrid" style="grid-template-columns:1fr 1fr"></div>
     <div style="height:12px"></div>
     <button class="btn btn-home" onclick="closeModal('mTask')">닫기</button>
+  </div>
+</div>
+
+<!-- ===== 모달: 차감량 확인 ===== -->
+<div class="modal-bg" id="mAmt">
+  <div class="modal">
+    <div class="h2" style="text-align:center" id="amtTitle">차감량 확인</div>
+    <div style="text-align:center;margin:12px 0;font-size:18px" id="amtInfo"></div>
+    <div class="row" style="max-width:260px;margin:0 auto">
+      <input type="number" id="amtInput" step="0.25" min="0" inputmode="decimal" style="text-align:center;font-size:26px;font-weight:800">
+      <b style="font-size:20px;flex-shrink:0" id="amtUnit">일</b>
+    </div>
+    <div class="sub" style="text-align:center;margin-top:10px">맞으면 그대로, 다르면 숫자를 고친 뒤 저장해주세요</div>
+    <div style="height:16px"></div>
+    <button class="btn btn-primary" onclick="confirmLeaveAmt()">저장</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-home" onclick="closeModal('mAmt')">취소</button>
   </div>
 </div>
 
@@ -405,7 +453,7 @@ const FIREBASE_CONFIG = {
 const ROOT = "hr_v1";
 
 /* ---------------- 데이터 계층 ---------------- */
-let DB = {tasks:{},employees:{},records:{},production:{},signatures:{},settings:{}};
+let DB = {tasks:{},employees:{},records:{},production:{},stock:{},signatures:{},settings:{}};
 let usingFirebase = false, fdb = null;
 const LOCAL_KEY = "hr_v1_local";
 
@@ -417,7 +465,7 @@ function initData(){
       fdb = firebase.database();
       usingFirebase = true;
       fdb.ref(ROOT).on("value", snap=>{
-        DB = Object.assign({tasks:{},employees:{},records:{},production:{},signatures:{},settings:{}}, snap.val()||{});
+        DB = Object.assign({tasks:{},employees:{},records:{},production:{},stock:{},signatures:{},settings:{}}, snap.val()||{});
         seedIfEmpty();
         rerender();
       });
@@ -634,6 +682,8 @@ function renderWeekCal(){
     div.className="day"; div.textContent=d.getDate();
     const isOff=(e.daysOff||[]).includes(d.getDay());
     if(r.leave==="연차"){div.classList.add("leave");div.innerHTML+="<small>연차</small>";}
+    else if(r.leave==="반차"){div.classList.add("half");div.innerHTML+="<small>반차</small>";}
+    else if(r.leave==="반반차"){div.classList.add("half");div.innerHTML+="<small>반반차</small>";}
     else if(r.leave==="대체휴무"){div.classList.add("alt");div.innerHTML+="<small>대체</small>";}
     else if(r.leave==="병가"){div.classList.add("sick");div.innerHTML+="<small>병가</small>";}
     else if(isOff){div.classList.add("off");div.innerHTML+="<small>정기휴무</small>";}
@@ -645,12 +695,53 @@ function renderWeekCal(){
     cal.appendChild(div);
   }
 }
+const LEAVE_FACTOR={"연차":1,"반차":0.5,"반반차":0.25,"대체휴무":1};
+function r1(x){return Math.round(x*10)/10}
+function r2(x){return Math.round(x*100)/100}
+let pendingLeave=null;
 function setLeave(type){
   if(!leaveDate) return;
   const empId = adminSession ? adminLeaveEmp : selEmp;
-  if(type){ dbSet(`records/${leaveDate}/${empId}/leave`, type); dbSet(`records/${leaveDate}/${empId}/leaveBy`, adminSession?"admin":"self"); toast("✅ "+type+" 기록됨"); }
-  else{ dbSet(`records/${leaveDate}/${empId}/leave`, null); dbSet(`records/${leaveDate}/${empId}/leaveBy`, null); toast("기록을 지웠어요"); }
+  if(!type){
+    dbSet(`records/${leaveDate}/${empId}/leave`, null);
+    dbSet(`records/${leaveDate}/${empId}/leaveBy`, null);
+    dbSet(`records/${leaveDate}/${empId}/leaveDays`, null);
+    dbSet(`records/${leaveDate}/${empId}/leaveHours`, null);
+    toast("기록을 지웠어요"); closeModal("mLeave"); return;
+  }
   closeModal("mLeave");
+  if(type==="병가"){
+    dbSet(`records/${leaveDate}/${empId}/leave`, "병가");
+    dbSet(`records/${leaveDate}/${empId}/leaveBy`, adminSession?"admin":"self");
+    toast("✅ 병가 기록됨"); return;
+  }
+  // 연차/반차/반반차/대체휴무 → 차감량 확인
+  const e=DB.employees[empId];
+  const d=new Date(leaveDate+"T00:00:00");
+  const dayH=empHours(e)[d.getDay()]||0;
+  const unit=e.leaveUnit||"day";
+  const factor=LEAVE_FACTOR[type];
+  pendingLeave={empId, date:leaveDate, type, unit, dayH};
+  document.getElementById("amtTitle").textContent=type+" 기록";
+  document.getElementById("amtInfo").innerHTML=`${d.getMonth()+1}월 ${d.getDate()}일은 <b>${dayH}시간</b> 근무일이에요.<br>차감할 ${type} 수량:`;
+  document.getElementById("amtUnit").textContent = unit==="hour"?"시간":"일";
+  document.getElementById("amtInput").value = unit==="hour"? r1(dayH*factor) : factor;
+  openModal("mAmt");
+}
+function confirmLeaveAmt(){
+  if(!pendingLeave) return;
+  const amt=parseFloat(document.getElementById("amtInput").value);
+  if(!(amt>0)){ toast("수량을 입력해주세요"); return; }
+  const {empId,date,type,unit,dayH}=pendingLeave;
+  const base=dayH||8;
+  const leaveHours = unit==="hour"? r1(amt) : r1(amt*base);
+  const leaveDays  = unit==="day" ? r2(amt) : r2(amt/base);
+  dbSet(`records/${date}/${empId}/leave`, type);
+  dbSet(`records/${date}/${empId}/leaveDays`, leaveDays);
+  dbSet(`records/${date}/${empId}/leaveHours`, leaveHours);
+  dbSet(`records/${date}/${empId}/leaveBy`, adminSession?"admin":"self");
+  closeModal("mAmt"); pendingLeave=null;
+  toast(`✅ ${type} ${unit==="hour"?leaveHours+"시간":leaveDays+"일"} 기록됨`);
 }
 /* --- 생산량 --- */
 function saveProduction(){
@@ -662,6 +753,16 @@ function saveProduction(){
   document.getElementById("prodGyeongju").value="";
   document.getElementById("prodBori").value="";
   toast("✅ 생산량 저장됨");
+}
+function saveStock(){
+  const g=parseInt(document.getElementById("stockGyeongju").value)||0;
+  const b=parseInt(document.getElementById("stockBori").value)||0;
+  if(g===0&&b===0){ toast("수량을 입력해주세요"); return; }
+  const entry={empId:selEmp, name:DB.employees[selEmp].name, gyeongju:g, bori:b, time:hm()};
+  dbSet(`stock/${today()}/entries/${newId()}`, entry);
+  document.getElementById("stockGyeongju").value="";
+  document.getElementById("stockBori").value="";
+  toast("✅ 재고수량 저장됨");
 }
 
 /* ---------------- 전월 출근부 확인/서명 ---------------- */
@@ -773,7 +874,7 @@ function renderDaily(){
   document.getElementById("dailyPresent").innerHTML=html;
   // 미출근자
   const dow=d.getDay();
-  const groups={"연차":[],"대체휴무":[],"병가":[],"정기휴무":[],"미입력":[]};
+  const groups={"연차":[],"반차":[],"반반차":[],"대체휴무":[],"병가":[],"정기휴무":[],"미입력":[]};
   activeEmps().forEach(([empId,e])=>{
     const r=recs[empId]||{};
     if(r.in) return;
@@ -781,7 +882,7 @@ function renderDaily(){
     else if((e.daysOff||[]).includes(dow)) groups["정기휴무"].push({empId,e});
     else groups["미입력"].push({empId,e});
   });
-  const chipCls={"연차":"b","대체휴무":"p","병가":"r","정기휴무":"g","미입력":"a"};
+  const chipCls={"연차":"b","반차":"a","반반차":"a","대체휴무":"p","병가":"r","정기휴무":"g","미입력":"a"};
   let ah="";
   Object.entries(groups).forEach(([g,list])=>{
     if(list.length===0) return;
@@ -804,20 +905,35 @@ function adminSetLeave(empId,date){
 }
 
 /* --- 직원 관리 --- */
-function buildDowChecks(containerId, selected){
-  const c=document.getElementById(containerId); c.innerHTML="";
-  DOW.forEach((name,i)=>{
-    const lb=document.createElement("label");
-    if((selected||[]).includes(i)) lb.classList.add("on");
-    lb.innerHTML=`<input type="checkbox" value="${i}" ${(selected||[]).includes(i)?"checked":""}>${name}`;
-    lb.onclick=ev=>{ ev.preventDefault();
-      const inp=lb.querySelector("input"); inp.checked=!inp.checked;
-      lb.classList.toggle("on",inp.checked); };
-    c.appendChild(lb);
+/* --- 요일별 근무시간 입력 --- */
+function buildHoursInputs(cid, hours){
+  const c=document.getElementById(cid); c.innerHTML="";
+  DOW.forEach((n,i)=>{
+    const d=document.createElement("div");
+    d.innerHTML=`<div class="hd" style="${i===0?'color:var(--red)':i===6?'color:var(--blue)':''}">${n}</div>`;
+    const inp=document.createElement("input");
+    inp.type="number"; inp.min=0; inp.max=24; inp.step=0.5; inp.inputMode="decimal"; inp.placeholder="0";
+    inp.value=(hours&&hours[i])?hours[i]:"";
+    inp.oninput=()=>updateHoursSum(cid);
+    d.appendChild(inp); c.appendChild(d);
   });
+  updateHoursSum(cid);
 }
-function getDowChecks(containerId){
-  return [...document.querySelectorAll(`#${containerId} input:checked`)].map(i=>parseInt(i.value));
+function getHoursInputs(cid){
+  return [...document.querySelectorAll(`#${cid} input`)].map(i=>parseFloat(i.value)||0);
+}
+function updateHoursSum(cid){
+  const sum=getHoursInputs(cid).reduce((a,b)=>a+b,0);
+  const el=document.getElementById(cid==="rHours"?"rHoursSum":"eHoursSum");
+  if(el) el.textContent="주 "+(Math.round(sum*10)/10)+"시간";
+}
+/* 직원의 요일별 근무시간 (예전 데이터는 휴무일 제외 8시간으로 간주) */
+function empHours(e){
+  if(Array.isArray(e.hours)&&e.hours.length===7) return e.hours;
+  return DOW.map((_,i)=>(e.daysOff||[]).includes(i)?0:8);
+}
+function weeklyHours(e){
+  return Math.round(empHours(e).reduce((a,b)=>a+b,0)*10)/10;
 }
 function fillTaskSelect(selId, cur){
   const s=document.getElementById(selId); s.innerHTML="";
@@ -837,7 +953,7 @@ function empTab(el,which){
 }
 function renderEmpAdmin(){
   fillTaskSelect("rTask");
-  if(document.getElementById("rDaysOff").children.length===0) buildDowChecks("rDaysOff",[]);
+  if(document.getElementById("rHours").children.length===0) buildHoursInputs("rHours",null);
   const cur=[], ret=[];
   Object.entries(DB.employees||{}).forEach(([id,e])=>(e.retired?ret:cur).push([id,e]));
   document.getElementById("curCnt").textContent=cur.length;
@@ -845,7 +961,7 @@ function renderEmpAdmin(){
   document.getElementById("empListCur").innerHTML = cur.length ? cur.map(([id,e])=>`
     <div class="emp-row"><div class="avatar">${e.name[0]}</div>
       <div class="emp-info"><div class="emp-name">${e.name}</div>
-      <div class="emp-meta">${taskName(e.taskId)} · 입사 ${e.joinDate||"-"} · 휴무 ${(e.daysOff||[]).map(i=>DOW[i]).join(",")||"없음"}</div></div>
+      <div class="emp-meta">${taskName(e.taskId)} · 입사 ${e.joinDate||"-"} · 주 ${weeklyHours(e)}시간 · 연차 ${e.leaveUnit==="hour"?"시간제":"일수제"} · 휴무 ${(e.daysOff||[]).map(i=>DOW[i]).join(",")||"없음"}</div></div>
       <button class="mini-btn" onclick="openEmpEdit('${id}')">수정</button></div>`).join("")
     : '<div class="sub" style="text-align:center;padding:14px 0">등록된 직원이 없습니다. 아래에서 등록해주세요.</div>';
   document.getElementById("empListRet").innerHTML = ret.length ? ret.map(([id,e])=>`
@@ -861,15 +977,19 @@ function registerEmp(){
   const pin=document.getElementById("rPin").value.trim();
   if(!name){ toast("이름을 입력해주세요"); return; }
   if(!/^\d{4}$/.test(pin)){ toast("비밀번호는 숫자 4자리로 해주세요"); return; }
+  const hours=getHoursInputs("rHours");
+  if(hours.reduce((a,b)=>a+b,0)===0){ toast("요일별 근무시간을 입력해주세요"); return; }
   const emp={
     name, birth:document.getElementById("rBirth").value||"",
     joinDate:document.getElementById("rJoin").value||"",
     taskId:document.getElementById("rTask").value,
-    daysOff:getDowChecks("rDaysOff"), pin, retired:false
+    hours, daysOff:hours.map((h,i)=>h===0?i:-1).filter(i=>i>=0),
+    leaveUnit:document.getElementById("rUnit").value,
+    pin, retired:false
   };
   dbSet("employees/"+newId(), emp);
   ["rName","rBirth","rJoin","rPin"].forEach(id=>document.getElementById(id).value="");
-  buildDowChecks("rDaysOff",[]);
+  buildHoursInputs("rHours",null);
   toast("✅ "+name+"님 등록 완료");
 }
 let editEmpId=null;
@@ -879,19 +999,24 @@ function openEmpEdit(id){
   document.getElementById("eBirth").value=e.birth||"";
   document.getElementById("eJoin").value=e.joinDate||"";
   fillTaskSelect("eTask", e.taskId);
-  buildDowChecks("eDaysOff", e.daysOff||[]);
+  buildHoursInputs("eHours", empHours(e));
+  document.getElementById("eUnit").value=e.leaveUnit||"day";
   document.getElementById("ePin").value=e.pin||"";
   openModal("mEdit");
 }
 function saveEmpEdit(){
   const pin=document.getElementById("ePin").value.trim();
   if(!/^\d{4}$/.test(pin)){ toast("비밀번호는 숫자 4자리로 해주세요"); return; }
+  const hours=getHoursInputs("eHours");
+  if(hours.reduce((a,b)=>a+b,0)===0){ toast("요일별 근무시간을 입력해주세요"); return; }
   const e=Object.assign({},DB.employees[editEmpId],{
     name:document.getElementById("eName").value.trim(),
     birth:document.getElementById("eBirth").value,
     joinDate:document.getElementById("eJoin").value,
     taskId:document.getElementById("eTask").value,
-    daysOff:getDowChecks("eDaysOff"), pin
+    hours, daysOff:hours.map((h,i)=>h===0?i:-1).filter(i=>i>=0),
+    leaveUnit:document.getElementById("eUnit").value,
+    pin
   });
   dbSet("employees/"+editEmpId, e);
   closeModal("mEdit"); toast("✅ 저장되었습니다");
@@ -937,11 +1062,13 @@ function removeTask(id){
 }
 
 /* --- 생산 통계 --- */
-let prodMode="week", prodOffset=0, prodChart=null;
+let prodMode="week", prodOffset=0, prodChart=null, prodSource="production";
+function srcName(){ return prodSource==="stock"?"재고":"생산"; }
+function srcSel(el){ el.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("on")); el.classList.add("on"); }
 function prodTabSel(el){ el.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("on")); el.classList.add("on"); prodOffset=0; }
 function moveProd(dir){ prodOffset+=dir; renderProd(); }
 function dailyTotals(date){
-  const p=(DB.production||{})[date];
+  const p=(DB[prodSource]||{})[date];
   if(!p) return null;
   if(p.confirmed) return p.confirmed;
   let g=0,b=0;
@@ -954,7 +1081,7 @@ function renderProd(){
     const start=weekStart(prodOffset);
     const end=new Date(start); end.setDate(end.getDate()+6);
     document.getElementById("prodLabel").textContent=`${start.getMonth()+1}/${start.getDate()} ~ ${end.getMonth()+1}/${end.getDate()}`;
-    document.getElementById("prodTableTitle").textContent="주간 집계표";
+    document.getElementById("prodTableTitle").textContent=`주간 ${srcName()} 집계표`;
     for(let i=0;i<7;i++){
       const d=new Date(start); d.setDate(d.getDate()+i);
       const t=dailyTotals(ds(d))||{gyeongju:0,bori:0};
@@ -965,9 +1092,9 @@ function renderProd(){
   }else{
     const now=new Date(); const year=now.getFullYear()+prodOffset;
     document.getElementById("prodLabel").textContent=`${year}년`;
-    document.getElementById("prodTableTitle").textContent=`${year}년 월별 집계표`;
+    document.getElementById("prodTableTitle").textContent=`${year}년 월별 ${srcName()} 집계표`;
     const monthly={};
-    Object.keys(DB.production||{}).forEach(date=>{
+    Object.keys(DB[prodSource]||{}).forEach(date=>{
       if(!date.startsWith(year+"-")) return;
       const m=parseInt(date.split("-")[1]);
       const t=dailyTotals(date); if(!t) return;
@@ -984,7 +1111,7 @@ function renderProd(){
   prodChart=new Chart(document.getElementById("prodChart"),{
     type:"bar",
     data:{labels,datasets:[
-      {label:"경주빵",data:gData,backgroundColor:"#3F6847"},
+      {label:"경주빵",data:gData,backgroundColor:prodSource==="stock"?"#3E6B8F":"#3F6847"},
       {label:"찰보리빵",data:bData,backgroundColor:"#B97F24"}]},
     options:{responsive:true,plugins:{legend:{position:"bottom"}}}
   });
@@ -998,7 +1125,7 @@ function renderProdEntries(){
   const dInput=document.getElementById("prodEditDate");
   if(!dInput.value) dInput.value=today();
   const date=dInput.value;
-  const p=(DB.production||{})[date]||{};
+  const p=(DB[prodSource]||{})[date]||{};
   const entries=Object.entries(p.entries||{});
   let html="";
   if(entries.length===0) html='<div class="sub" style="text-align:center;padding:10px 0">이 날짜에 입력된 기록이 없습니다</div>';
@@ -1020,28 +1147,28 @@ function renderProdEntries(){
   document.getElementById("prodEntries").innerHTML=html;
 }
 function pickProdEntry(date,eid){
-  const e=DB.production[date].entries[eid];
-  dbSet(`production/${date}/confirmed`, {gyeongju:e.gyeongju||0, bori:e.bori||0});
+  const e=DB[prodSource][date].entries[eid];
+  dbSet(`${prodSource}/${date}/confirmed`, {gyeongju:e.gyeongju||0, bori:e.bori||0});
   toast("✅ "+e.name+"님 기록으로 확정");
   setTimeout(()=>{renderProdEntries();renderProd();},300);
 }
 function delProdEntry(date,eid){
   if(!confirm("이 기록을 삭제할까요?")) return;
-  dbSet(`production/${date}/entries/${eid}`, null);
+  dbSet(`${prodSource}/${date}/entries/${eid}`, null);
   setTimeout(()=>{renderProdEntries();renderProd();},300);
 }
 function editConfirmed(date){
-  const cur=((DB.production||{})[date]||{}).confirmed||{};
+  const cur=((DB[prodSource]||{})[date]||{}).confirmed||{};
   const g=prompt("경주빵 확정 수량", cur.gyeongju!=null?cur.gyeongju:""); if(g===null) return;
   const b=prompt("찰보리빵 확정 수량", cur.bori!=null?cur.bori:""); if(b===null) return;
-  dbSet(`production/${date}/confirmed`, {gyeongju:parseInt(g)||0, bori:parseInt(b)||0});
+  dbSet(`${prodSource}/${date}/confirmed`, {gyeongju:parseInt(g)||0, bori:parseInt(b)||0});
   setTimeout(()=>{renderProdEntries();renderProd();},300);
 }
 function downloadProd(){
   const rows=window._prodRows||[];
   let csv="\uFEFF구분,경주빵,찰보리빵,합계\n";
   rows.forEach(r=>csv+=`${r[0]},${r[1]},${r[2]},${r[1]+r[2]}\n`);
-  dlFile(csv, "생산집계_"+document.getElementById("prodLabel").textContent.replace(/[\s/~]/g,"")+".csv");
+  dlFile(csv, srcName()+"집계_"+document.getElementById("prodLabel").textContent.replace(/[\s/~]/g,"")+".csv");
 }
 function dlFile(content, name){
   const a=document.createElement("a");
@@ -1056,7 +1183,8 @@ function buildAttTable(empId, ym, editable){
   const last=new Date(y,m,0).getDate();
   const todayStr=today();
   let html=`<table class="tt"><tr><th>날짜</th><th>출근</th><th>퇴근</th><th>휴무사유</th><th>비고</th></tr>`;
-  const chipMap={"연차":"b","대체휴무":"p","병가":"r"};
+  const chipMap={"연차":"b","반차":"a","반반차":"a","대체휴무":"p","병가":"r"};
+  const unit=e.leaveUnit||"day";
   for(let d=1;d<=last;d++){
     const dt=new Date(y,m-1,d);
     const dstr=ds(dt);
@@ -1065,7 +1193,15 @@ function buildAttTable(empId, ym, editable){
     const past = dstr<=todayStr;
     let reason="-", note=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:"~")).join(", ");
     if(r.early) note=(note?note+", ":"")+"조퇴 "+r.early;
-    if(r.leave) reason=`<span class="chip ${chipMap[r.leave]||"a"}">${r.leave}</span>`;
+    if(r.leave){
+      let amt="";
+      if(LEAVE_FACTOR[r.leave]!=null){
+        amt = unit==="hour"
+          ? `<br><span class="sub" style="font-size:10px">${r.leaveHours!=null?r.leaveHours:r1((empHours(e)[dt.getDay()]||8)*LEAVE_FACTOR[r.leave])}h</span>`
+          : `<br><span class="sub" style="font-size:10px">${r.leaveDays!=null?r.leaveDays:LEAVE_FACTOR[r.leave]}일</span>`;
+      }
+      reason=`<span class="chip ${chipMap[r.leave]||"a"}">${r.leave}</span>${amt}`;
+    }
     else if(isOff && !r.in) reason='<span style="color:var(--sub)">정기휴무</span>';
     else if(past && !r.in) reason='<span class="chip a">기타(미입력)</span>';
     const inCell = editable ? `<td class="editable" onclick="editCell('${dstr}','in','${empId}')">${r.in||"－"}</td>` : `<td>${r.in||"-"}</td>`;
@@ -1074,25 +1210,36 @@ function buildAttTable(empId, ym, editable){
   }
   return html+"</table>";
 }
+function fmtD(x){ x=r2(x); return (x%1===0?x.toFixed(0):x.toFixed(2).replace(/0$/,""))+"일"; }
+function fmtH(x){ x=r1(x); return (x%1===0?x.toFixed(0):x.toFixed(1))+"시간"; }
 function calcLeave(e){
-  if(!e.joinDate) return {earned:0,usedL:0,usedA:0};
+  const unit=e.leaveUnit||"day";
+  const hrs=empHours(e), weekly=weeklyHours(e);
+  if(!e.joinDate) return {unit,weekly,earned:0,usedL:0,usedA:0,earnedDays:0};
   const join=new Date(e.joinDate), now=new Date();
   const years=(now-join)/(365.25*24*3600*1000);
-  let earned;
-  if(years<1){ earned=Math.min(11, Math.floor(years*12)); }
-  else{ earned=Math.min(25, 15+Math.floor((Math.floor(years)-1)/2)); }
-  // 올해 사용량
+  let earnedDays;
+  if(years<1){ earnedDays=Math.min(11, Math.floor(years*12)); }
+  else{ earnedDays=Math.min(25, 15+Math.floor((Math.floor(years)-1)/2)); }
+  const ratio=Math.min(1, weekly/40);
+  const earned = unit==="hour" ? r1(earnedDays*8*ratio) : earnedDays;
+  // 올해 사용량 (연차·반차·반반차 = 연차 사용, 대체휴무 = 대체 사용)
   const yr=now.getFullYear()+"-";
   let usedL=0, usedA=0;
   Object.entries(DB.records||{}).forEach(([date,recs])=>{
     if(!date.startsWith(yr)) return;
-    Object.entries(recs).forEach(([empId,r])=>{
-      if(empId!==e._id) return;
-      if(r.leave==="연차") usedL++;
-      if(r.leave==="대체휴무") usedA++;
-    });
+    const r=recs[e._id]; if(!r||!r.leave) return;
+    const factor=LEAVE_FACTOR[r.leave]; if(factor==null) return;
+    const dow=new Date(date+"T00:00:00").getDay();
+    const dayH=hrs[dow]||8;
+    const amt = unit==="hour"
+      ? (r.leaveHours!=null? r.leaveHours : dayH*factor)
+      : (r.leaveDays!=null? r.leaveDays : factor);
+    if(r.leave==="대체휴무") usedA+=amt; else usedL+=amt;
   });
-  return {earned,usedL,usedA};
+  usedL = unit==="hour"? r1(usedL) : r2(usedL);
+  usedA = unit==="hour"? r1(usedA) : r2(usedA);
+  return {unit,weekly,earned,usedL,usedA,earnedDays};
 }
 function renderAtt(){
   const sel=document.getElementById("attEmp");
@@ -1115,14 +1262,17 @@ function renderAtt(){
   document.getElementById("attSign").innerHTML = sig
     ? `<img class="sign-img" src="${sig.img}"><div class="sub">서명일: ${sig.signedAt}</div>`
     : '<div class="sub" style="padding:8px 0">아직 서명되지 않았습니다 (직원이 다음 달 초 로그인 시 확인·서명)</div>';
-  // 연차 표
-  let lt=`<table class="tt"><tr><th>이름</th><th>입사일</th><th>발생 연차</th><th>사용(연차)</th><th>사용(대체)</th><th>잔여</th></tr>`;
+  // 연차 표 (방식별 표기)
+  let lt=`<table class="tt"><tr><th>이름</th><th>입사일</th><th>주간<br>근무</th><th>방식</th><th>발생</th><th>사용<br>(연차)</th><th>사용<br>(대체)</th><th>잔여</th></tr>`;
   emps.forEach(([id,emp])=>{
     emp._id=id;
     const c=calcLeave(emp);
-    lt+=`<tr class="year-summary"><td>${emp.name}</td><td>${emp.joinDate||"-"}</td><td>${c.earned}</td><td>${c.usedL}</td><td>${c.usedA}</td><td><b>${c.earned-c.usedL-c.usedA}</b></td></tr>`;
+    const f = c.unit==="hour"? fmtH : fmtD;
+    const rest = c.earned - c.usedL - c.usedA;
+    lt+=`<tr class="year-summary"><td>${emp.name}</td><td>${emp.joinDate||"-"}</td><td>${c.weekly}h</td><td>${c.unit==="hour"?"시간":"일수"}</td><td>${f(c.earned)}${c.unit==="hour"?`<br><span class="sub" style="font-size:10px">(${c.earnedDays}일 기준)</span>`:""}</td><td>${f(c.usedL)}</td><td>${f(c.usedA)}</td><td><b>${f(rest)}</b></td></tr>`;
   });
-  document.getElementById("leaveTable").innerHTML=lt+"</table>";
+  lt+=`</table><div class="sub" style="margin-top:8px;font-size:12px">※ 일수 방식: 연차 1일·반차 0.5일·반반차 0.25일 차감 / 시간 방식: 주40시간 기준 연차 × (주간근무÷40) × 8시간 발생, 해당 요일 근무시간만큼 차감</div>`;
+  document.getElementById("leaveTable").innerHTML=lt;
 }
 function downloadAtt(){
   const empId=document.getElementById("attEmp").value;
@@ -1143,10 +1293,11 @@ function downloadAtt(){
     if(r.early) note+=(note?" / ":"")+"조퇴 "+r.early;
     csv+=`${m}/${d}(${DOW[dt.getDay()]}),${r.in||""},${r.out||""},${reason},${note}\n`;
   }
-  csv+=`\n연차 정리 (올해 기준)\n이름,입사일,발생,사용(연차),사용(대체),잔여\n`;
+  csv+=`\n연차 정리 (올해 기준)\n이름,입사일,주간 근무시간,계산 방식,발생,사용(연차),사용(대체),잔여\n`;
   activeEmps().forEach(([id,emp])=>{
     emp._id=id; const c=calcLeave(emp);
-    csv+=`${emp.name},${emp.joinDate||""},${c.earned},${c.usedL},${c.usedA},${c.earned-c.usedL-c.usedA}\n`;
+    const f = c.unit==="hour"? fmtH : fmtD;
+    csv+=`${emp.name},${emp.joinDate||""},${c.weekly},${c.unit==="hour"?"시간":"일수"},${f(c.earned)},${f(c.usedL)},${f(c.usedA)},${f(c.earned-c.usedL-c.usedA)}\n`;
   });
   dlFile(csv, `근태기록_${e.name}_${ym}.csv`);
 }
