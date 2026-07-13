@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>경주제과 근태관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#F7F5F1; --card:#fff; --ink:#2B2724; --sub:#877E74; --line:#E6E0D8;
+  --brand:#3F6847; --brand-soft:#E9F0EA;
+  --amber:#B97F24; --amber-soft:#FAF1DF;
+  --red:#BE4A3E; --red-soft:#FAEAE7;
+  --blue:#3E6B8F; --blue-soft:#E8F0F6;
+  --purple:#6B5B95; --purple-soft:#EEEBF5;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Pretendard',-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink)}
+.screen{max-width:520px;margin:0 auto;padding:18px;display:none;min-height:100vh}
+.screen.show{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+.h1{font-size:24px;font-weight:800}
+.h2{font-size:18px;font-weight:700}
+.sub{font-size:15px;color:var(--sub)}
+.section-t{font-size:15px;font-weight:800;color:var(--sub);margin:22px 0 10px}
+.btn{display:block;width:100%;padding:18px;border:none;border-radius:14px;font-size:20px;font-weight:800;cursor:pointer}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-ghost{background:var(--brand-soft);color:var(--brand)}
+.btn-home{background:#EFEBE5;color:var(--ink);font-size:17px;padding:14px}
+.chip{display:inline-block;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700}
+.chip.g{background:var(--brand-soft);color:var(--brand)}
+.chip.a{background:var(--amber-soft);color:var(--amber)}
+.chip.r{background:var(--red-soft);color:var(--red)}
+.chip.b{background:var(--blue-soft);color:var(--blue)}
+.chip.p{background:var(--purple-soft);color:var(--purple)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+input,select{width:100%;padding:14px;border:1px solid var(--line);border-radius:12px;font-size:17px;background:#fff}
+label{font-size:14px;color:var(--sub);display:block;margin:12px 0 6px;font-weight:700}
+.big-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.big-grid button{padding:28px 8px;border:2px solid var(--line);border-radius:18px;background:#fff;font-size:23px;font-weight:800;cursor:pointer;color:var(--ink);word-break:keep-all}
+.big-grid button:active{background:var(--brand-soft);border-color:var(--brand)}
+.pin-dots{display:flex;gap:16px;justify-content:center;margin:22px 0}
+.pin-dots i{width:18px;height:18px;border-radius:50%;background:var(--line)}
+.pin-dots i.f{background:var(--brand)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:320px;margin:0 auto}
+.pin-pad button{padding:20px;font-size:28px;font-weight:800;border:1px solid var(--line);border-radius:16px;background:#fff;cursor:pointer}
+.pin-pad button:active{background:var(--brand-soft)}
+.clock-card{text-align:center;padding:24px 16px}
+.clock-time{font-size:52px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.clock-date{font-size:17px;color:var(--sub);margin-bottom:18px}
+.punch-main{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.punch-main button{padding:28px 8px;border:none;border-radius:16px;font-size:26px;font-weight:800;cursor:pointer;color:#fff}
+.pb-in{background:var(--brand)}
+.pb-out{background:var(--blue)}
+.punch-sub{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.punch-sub button{padding:12px 8px;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;color:#fff}
+.pb-early{background:var(--amber)}
+.pb-away{background:var(--purple)}
+.task-box{background:var(--brand-soft);border:none;text-align:center}
+.task-box .big{font-size:24px;font-weight:800;color:var(--brand);margin:6px 0 12px}
+.week-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.week-cal .dow{font-size:13px;font-weight:700;color:var(--sub)}
+.week-cal .day{padding:12px 2px;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font-size:17px;font-weight:700;min-height:56px}
+.week-cal .day small{display:block;font-size:10px;font-weight:800;margin-top:3px}
+.week-cal .day.leave{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.week-cal .day.alt{background:var(--purple-soft);border-color:var(--purple);color:var(--purple)}
+.week-cal .day.sick{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.week-cal .day.off{background:#F1EDE7;color:var(--sub);cursor:default}
+.week-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.week-nav button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 16px;font-size:16px;cursor:pointer;font-weight:600}
+.legend{display:flex;gap:10px;justify-content:center;margin-top:10px;font-size:13px;color:var(--sub);flex-wrap:wrap}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.daily-cat{margin-bottom:10px}
+.daily-cat .cat-h{display:flex;justify-content:space-between;font-size:16px;font-weight:800;padding:10px 4px 6px}
+.name-tags{display:flex;flex-wrap:wrap;gap:6px}
+.name-tags span{background:var(--brand-soft);color:var(--brand);padding:6px 13px;border-radius:20px;font-size:15px;font-weight:700}
+.absent-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;font-size:15px}
+.mini-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;color:var(--sub);white-space:nowrap}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:none;max-width:520px;margin:0 auto;z-index:150}
+.nav button{flex:1;padding:10px 2px 16px;border:none;background:none;font-size:12px;color:var(--sub);cursor:pointer;font-weight:600}
+.nav button .ic{font-size:22px;display:block;margin-bottom:2px}
+.nav button.on{color:var(--brand);font-weight:800}
+.pad-bottom{padding-bottom:100px}
+.emp-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.emp-row:last-child{border:none}
+.avatar{width:42px;height:42px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
+.emp-info{flex:1}
+.emp-name{font-size:16px;font-weight:700}
+.emp-meta{font-size:13px;color:var(--sub)}
+.tab2{display:flex;background:var(--line);border-radius:12px;padding:4px;margin-bottom:12px}
+.tab2 button{flex:1;padding:10px;border:none;border-radius:9px;background:transparent;font-size:15px;font-weight:700;color:var(--sub);cursor:pointer}
+.tab2 button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+table.tt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.tt th,table.tt td{border:1px solid var(--line);padding:6px 3px;text-align:center}
+table.tt th{background:#F1EDE7;font-weight:800}
+.dl-btn{background:var(--blue-soft);color:var(--blue)}
+.dow-check{display:flex;gap:6px;flex-wrap:wrap}
+.dow-check label{display:flex;align-items:center;gap:4px;margin:0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:15px;cursor:pointer;color:var(--ink)}
+.dow-check label.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:800}
+.dow-check input{display:none}
+.modal-bg{position:fixed;inset:0;background:rgba(30,25,20,.55);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:20px 20px 0 0;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:20px}
+@media(min-width:560px){.modal-bg{align-items:center}.modal{border-radius:20px}}
+.sign-canvas{border:2px dashed var(--line);border-radius:12px;width:100%;height:140px;touch-action:none;background:#FCFBF9}
+.sign-img{border:1px solid var(--line);border-radius:12px;max-width:100%;height:90px;background:#FCFBF9}
+.banner{background:var(--amber-soft);color:var(--amber);padding:12px;border-radius:12px;font-size:14px;font-weight:600;margin-bottom:12px;display:none}
+.prod-input-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.prod-input-row b{width:80px;font-size:17px;flex-shrink:0}
+.prod-input-row input{text-align:center;font-size:20px}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:14px 26px;border-radius:30px;font-size:17px;font-weight:700;z-index:400;display:none;white-space:nowrap}
+.tt td.editable{cursor:pointer;color:var(--blue);text-decoration:underline dotted}
+.year-summary td b{color:var(--brand)}
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- ===== 직원: 업무 선택 ===== -->
+<div class="screen show" id="s-cat">
+  <div id="fbWarn" class="banner">⚠ 서버 연결 설정이 필요합니다. 파일 상단의 FIREBASE_CONFIG를 입력해주세요. (현재는 이 기기에만 저장됩니다)</div>
+  <div style="text-align:center;margin:20px 0 24px">
+    <div class="h1">어서오세요 👋</div>
+    <div class="sub" style="margin-top:6px">오늘 하시는 <b>업무</b>를 눌러주세요</div>
+  </div>
+  <div class="big-grid" id="catGrid"></div>
+  <div style="height:20px"></div>
+  <button class="btn btn-home" onclick="adminLoginAsk()">🔒 관리자</button>
+</div>
+
+<!-- ===== 직원: 이름 선택 ===== -->
+<div class="screen" id="s-name">
+  <div style="text-align:center;margin:14px 0 22px">
+    <div class="h1" id="nameTitle"></div>
+    <div class="sub" style="margin-top:6px">본인 <b>이름</b>을 눌러주세요</div>
+  </div>
+  <div class="big-grid" id="nameGrid"></div>
+  <div style="height:20px"></div>
+  <button class="btn btn-home" onclick="go('cat')">← 처음으로</button>
+</div>
+
+<!-- ===== 직원: PIN ===== -->
+<div class="screen" id="s-pin">
+  <div style="text-align:center;margin:14px 0">
+    <div class="h1" id="pinTitle"></div>
+    <div class="sub" style="margin-top:6px">비밀번호 <b>4자리</b>를 눌러주세요</div>
+  </div>
+  <div class="pin-dots" id="pinDots"><i></i><i></i><i></i><i></i></div>
+  <div class="pin-pad">
+    <button onclick="pinKey(1)">1</button><button onclick="pinKey(2)">2</button><button onclick="pinKey(3)">3</button>
+    <button onclick="pinKey(4)">4</button><button onclick="pinKey(5)">5</button><button onclick="pinKey(6)">6</button>
+    <button onclick="pinKey(7)">7</button><button onclick="pinKey(8)">8</button><button onclick="pinKey(9)">9</button>
+    <button style="color:var(--sub);font-size:15px" onclick="go('cat')">처음으로</button>
+    <button onclick="pinKey(0)">0</button>
+    <button style="color:var(--sub);font-size:20px" onclick="pinBack()">⌫</button>
+  </div>
+</div>
+
+<!-- ===== 직원 홈 ===== -->
+<div class="screen" id="s-emphome">
+  <div class="row" style="margin-bottom:14px">
+    <div><div class="h1" id="empHomeName"></div><div class="sub">오늘도 수고 많으십니다 😊</div></div>
+    <span class="chip g" style="font-size:15px" id="empHomeStatus">-</span>
+  </div>
+
+  <div class="card clock-card">
+    <div class="clock-time" id="liveClock">--:--:--</div>
+    <div class="clock-date" id="liveDate"></div>
+    <div class="punch-main">
+      <button class="pb-in" onclick="punch('in')">출근</button>
+      <button class="pb-out" onclick="punch('out')">퇴근</button>
+    </div>
+    <div class="punch-sub">
+      <button class="pb-early" onclick="punch('early')">조퇴</button>
+      <button class="pb-away" onclick="punch('away')">외출</button>
+    </div>
+    <div class="sub" style="margin-top:14px" id="todayLog">오늘 기록 없음</div>
+  </div>
+
+  <div class="card task-box">
+    <div class="sub" style="color:var(--brand);font-weight:700">오늘 나의 업무</div>
+    <div class="big" id="myTask">-</div>
+    <button class="btn" style="background:#fff;color:var(--brand);font-size:18px;padding:14px" onclick="openTaskChange()">업무 변경하기</button>
+  </div>
+
+  <div class="section-t">📅 휴무를 기록하세요</div>
+  <div class="card">
+    <div class="week-nav">
+      <button onclick="moveWeek(-1)">◀ 지난주</button>
+      <b style="font-size:16px" id="weekLabel"></b>
+      <button onclick="moveWeek(1)">다음주 ▶</button>
+    </div>
+    <div class="week-cal" id="weekCal"></div>
+    <div class="legend">
+      <span><i style="background:var(--blue)"></i>연차</span>
+      <span><i style="background:var(--purple)"></i>대체휴무</span>
+      <span><i style="background:var(--red)"></i>병가</span>
+      <span><i style="background:#D8D2C9"></i>정기휴무</span>
+    </div>
+    <div class="sub" style="text-align:center;margin-top:8px">지난 날짜, 다가오는 날짜 모두 기록할 수 있어요</div>
+  </div>
+
+  <div class="card task-box" style="background:var(--amber-soft)">
+    <div class="sub" style="color:var(--amber);font-weight:700;margin-bottom:10px">오늘 생산량 입력</div>
+    <div class="prod-input-row"><b>경주빵</b><input type="number" id="prodGyeongju" placeholder="개수" inputmode="numeric"></div>
+    <div class="prod-input-row"><b>찰보리빵</b><input type="number" id="prodBori" placeholder="개수" inputmode="numeric"></div>
+    <button class="btn" style="background:var(--amber);color:#fff;font-size:18px;padding:14px;margin-top:6px" onclick="saveProduction()">생산량 저장</button>
+  </div>
+
+  <button class="btn btn-home" onclick="logoutEmp()">🏠 처음으로 (다음 분 기록)</button>
+  <div style="height:24px"></div>
+</div>
+
+<!-- ===== 관리자: 일일상황 ===== -->
+<div class="screen pad-bottom" id="s-adm-daily">
+  <div class="row" style="margin-bottom:6px">
+    <div><div class="h1">일일 업무상황표</div><div class="sub" id="dailyDateLabel"></div></div>
+    <input type="date" id="dailyDate" style="width:auto;padding:8px;font-size:14px" onchange="renderDaily()">
+  </div>
+  <div class="section-t">✅ 출근자 (업무별)</div>
+  <div class="card" id="dailyPresent"></div>
+  <div class="section-t">🔎 미출근자</div>
+  <div class="card" id="dailyAbsent"></div>
+</div>
+
+<!-- ===== 관리자: 직원 ===== -->
+<div class="screen pad-bottom" id="s-adm-emp">
+  <div class="h1" style="margin-bottom:14px">직원 관리</div>
+  <div class="tab2">
+    <button class="on" onclick="empTab(this,'cur')">현직원 (<span id="curCnt">0</span>)</button>
+    <button onclick="empTab(this,'ret')">퇴사자 (<span id="retCnt">0</span>)</button>
+  </div>
+  <div class="card" id="empListCur"></div>
+  <div id="empRetWrap" style="display:none">
+    <div class="card" id="empListRet"></div>
+    <div class="sub" style="text-align:center;margin-bottom:12px">퇴사자는 출퇴근 기록·이름 선택 화면에서 제외됩니다</div>
+  </div>
+
+  <div class="section-t">➕ 직원 등록</div>
+  <div class="card">
+    <label>이름</label><input id="rName" placeholder="홍길동">
+    <label>생년월일</label><input id="rBirth" type="date">
+    <label>입사일</label><input id="rJoin" type="date">
+    <label>업무</label><select id="rTask"></select>
+    <label>휴무일 (여러 날 선택 가능)</label>
+    <div class="dow-check" id="rDaysOff"></div>
+    <label>비밀번호 (4자리)</label><input id="rPin" maxlength="4" placeholder="0000" inputmode="numeric">
+    <div style="height:14px"></div>
+    <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="registerEmp()">등록하기</button>
+  </div>
+
+  <div class="section-t">🗂 업무 카테고리 관리</div>
+  <div class="card" id="taskManage"></div>
+
+  <div class="section-t">🔑 관리자 비밀번호</div>
+  <div class="card">
+    <button class="btn btn-ghost" style="font-size:16px;padding:13px" onclick="changeAdminPw()">비밀번호 변경</button>
+  </div>
+</div>
+
+<!-- ===== 관리자: 생산통계 ===== -->
+<div class="screen pad-bottom" id="s-adm-prod">
+  <div class="h1" style="margin-bottom:4px">생산 통계</div>
+  <div class="sub" style="margin-bottom:14px">직원이 입력한 생산량 자동 집계</div>
+  <div class="tab2">
+    <button class="on" onclick="prodMode='week';prodTabSel(this);renderProd()">일자별</button>
+    <button onclick="prodMode='month';prodTabSel(this);renderProd()">월별</button>
+  </div>
+  <div class="card">
+    <div class="week-nav">
+      <button onclick="moveProd(-1)">◀ 이전</button>
+      <b style="font-size:16px" id="prodLabel"></b>
+      <button onclick="moveProd(1)">다음 ▶</button>
+    </div>
+    <canvas id="prodChart" height="220"></canvas>
+  </div>
+  <div class="card">
+    <div class="h2" style="margin-bottom:10px" id="prodTableTitle">집계표</div>
+    <div id="prodTable"></div>
+    <div style="height:12px"></div>
+    <button class="btn dl-btn" style="font-size:16px;padding:14px" onclick="downloadProd()">⬇ 집계표 다운로드 (엑셀)</button>
+  </div>
+  <div class="card">
+    <div class="h2" style="margin-bottom:6px">날짜별 기록 관리</div>
+    <div class="sub" style="margin-bottom:10px">같은 날 여러 명이 입력한 경우 선택하거나 수정하세요</div>
+    <input type="date" id="prodEditDate" onchange="renderProdEntries()">
+    <div id="prodEntries" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<!-- ===== 관리자: 근태통계 ===== -->
+<div class="screen pad-bottom" id="s-adm-att">
+  <div class="h1" style="margin-bottom:14px">근태 통계</div>
+  <div class="card">
+    <label>직원 선택</label><select id="attEmp" onchange="renderAtt()"></select>
+    <label>월 선택</label><input type="month" id="attMonth" onchange="renderAtt()">
+  </div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <div class="h2" id="attTitle">출근표</div><span class="chip g" id="attTaskChip"></span>
+    </div>
+    <div id="attTable"></div>
+    <div class="sub" style="margin:8px 0 4px;font-weight:700">✍ 직원 확인 서명</div>
+    <div id="attSign"></div>
+  </div>
+  <div class="card">
+    <div class="h2" style="margin-bottom:10px">연차 계산 <span class="sub" style="font-weight:400">· 입사일 기준 자동</span></div>
+    <div id="leaveTable"></div>
+  </div>
+  <button class="btn dl-btn" style="font-size:16px;padding:14px" onclick="downloadAtt()">⬇ 근태 기록 다운로드 (엑셀)</button>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ===== 하단 관리자 네비 ===== -->
+<div class="nav" id="admNav">
+  <button class="on" onclick="admGo('adm-daily',0)"><span class="ic">📋</span>일일상황</button>
+  <button onclick="admGo('adm-emp',1)"><span class="ic">👥</span>직원</button>
+  <button onclick="admGo('adm-prod',2)"><span class="ic">📈</span>생산통계</button>
+  <button onclick="admGo('adm-att',3)"><span class="ic">🗓</span>근태통계</button>
+  <button onclick="adminLogout()"><span class="ic">🚪</span>나가기</button>
+</div>
+
+<!-- ===== 모달: 직원 수정 ===== -->
+<div class="modal-bg" id="mEdit">
+  <div class="modal">
+    <div class="h2" style="margin-bottom:6px">직원 정보 수정</div>
+    <label>이름</label><input id="eName">
+    <label>생년월일</label><input id="eBirth" type="date">
+    <label>입사일</label><input id="eJoin" type="date">
+    <label>업무</label><select id="eTask"></select>
+    <label>휴무일</label><div class="dow-check" id="eDaysOff"></div>
+    <label>비밀번호 (4자리)</label><input id="ePin" maxlength="4" inputmode="numeric">
+    <div style="height:16px"></div>
+    <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="saveEmpEdit()">저장</button>
+    <div style="height:8px"></div>
+    <button class="btn" style="background:var(--red-soft);color:var(--red);font-size:15px;padding:12px" onclick="retireEmp()">퇴사 등록</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-home" onclick="closeModal('mEdit')">닫기</button>
+  </div>
+</div>
+
+<!-- ===== 모달: 휴무 선택 ===== -->
+<div class="modal-bg" id="mLeave">
+  <div class="modal">
+    <div class="h2" style="text-align:center" id="mLeaveTitle">휴무 기록</div>
+    <div class="sub" style="text-align:center;margin:6px 0 16px">종류를 선택해주세요</div>
+    <div class="big-grid" style="grid-template-columns:1fr">
+      <button style="color:var(--blue);border-color:var(--blue-soft);background:var(--blue-soft)" onclick="setLeave('연차')">연차</button>
+      <button style="color:var(--purple);border-color:var(--purple-soft);background:var(--purple-soft)" onclick="setLeave('대체휴무')">대체휴무</button>
+      <button style="color:var(--red);border-color:var(--red-soft);background:var(--red-soft)" onclick="setLeave('병가')">병가</button>
+      <button onclick="setLeave(null)">기록 지우기</button>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn btn-home" onclick="closeModal('mLeave')">닫기</button>
+  </div>
+</div>
+
+<!-- ===== 모달: 업무 변경 ===== -->
+<div class="modal-bg" id="mTask">
+  <div class="modal">
+    <div class="h2" style="text-align:center;margin-bottom:16px">오늘 업무 선택</div>
+    <div class="big-grid" id="taskChangeGrid" style="grid-template-columns:1fr 1fr"></div>
+    <div style="height:12px"></div>
+    <button class="btn btn-home" onclick="closeModal('mTask')">닫기</button>
+  </div>
+</div>
+
+<!-- ===== 모달: 전월 출근부 확인/서명 ===== -->
+<div class="modal-bg" id="mConfirm">
+  <div class="modal">
+    <div class="h2" id="mConfirmTitle">지난달 출근부 확인</div>
+    <div class="sub" style="margin:6px 0 12px">기록을 확인하시고 아래에 서명해주세요.<br>틀린 부분이 있으면 <b>관리자에게 말씀해주세요.</b></div>
+    <div id="mConfirmTable" style="max-height:40vh;overflow-y:auto"></div>
+    <div class="sub" style="margin:12px 0 6px;font-weight:700">✍ 여기에 손가락으로 서명해주세요</div>
+    <canvas class="sign-canvas" id="signCanvas"></canvas>
+    <div class="row" style="margin-top:10px">
+      <button class="mini-btn" onclick="clearSign()">서명 지우기</button>
+    </div>
+    <div style="height:12px"></div>
+    <button class="btn btn-primary" onclick="submitSign()">확인했습니다 (서명 저장)</button>
+    <div style="height:8px"></div>
+    <button class="btn btn-home" onclick="closeModal('mConfirm')">나중에 하기</button>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   ★ Firebase 설정 — 가계부 앱과 동일한 config를 붙여넣으세요 ★
+   (Firebase 콘솔 → 프로젝트 설정 → 일반 → 내 앱 → SDK 설정)
+   데이터는 "hr_v1" 경로에 저장되어 가계부와 섞이지 않습니다.
+================================================================ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCKScTlKUfdzGjXX2A8v4kCAjOSG9ddLLM",
+  authDomain: "budget-ab15b.firebaseapp.com",
+  databaseURL: "https://budget-ab15b-default-rtdb.firebaseio.com",
+  projectId: "budget-ab15b",
+  storageBucket: "budget-ab15b.firebasestorage.app",
+  messagingSenderId: "1038388612689",
+  appId: "1:1038388612689:web:830d6ec56b0ba4a203f270"
+};
+const ROOT = "hr_v1";
+
+/* ---------------- 데이터 계층 ---------------- */
+let DB = {tasks:{},employees:{},records:{},production:{},signatures:{},settings:{}};
+let usingFirebase = false, fdb = null;
+const LOCAL_KEY = "hr_v1_local";
+
+function initData(){
+  const configured = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "여기에_붙여넣기";
+  if(configured && location.protocol !== "file:"){
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      fdb = firebase.database();
+      usingFirebase = true;
+      fdb.ref(ROOT).on("value", snap=>{
+        DB = Object.assign({tasks:{},employees:{},records:{},production:{},signatures:{},settings:{}}, snap.val()||{});
+        seedIfEmpty();
+        rerender();
+      });
+      return;
+    }catch(e){ console.error(e); }
+  }
+  document.getElementById("fbWarn").style.display = "block";
+  try{ DB = Object.assign(DB, JSON.parse(localStorage.getItem(LOCAL_KEY)||"{}")); }catch(e){}
+  seedIfEmpty(); rerender();
+}
+function dbSet(path, val){
+  if(usingFirebase){ fdb.ref(ROOT+"/"+path).set(val); }
+  else{
+    const keys = path.split("/"); let o = DB;
+    for(let i=0;i<keys.length-1;i++){ if(!o[keys[i]]) o[keys[i]]={}; o=o[keys[i]]; }
+    if(val===null) delete o[keys[keys.length-1]]; else o[keys[keys.length-1]]=val;
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(DB));
+    rerender();
+  }
+}
+function newId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function seedIfEmpty(){
+  if(Object.keys(DB.tasks||{}).length===0){
+    const defaults=["경주빵","찰보리빵","포장","배송","기타"];
+    const t={}; defaults.forEach((n,i)=>t["t"+i]={name:n,order:i,active:true});
+    DB.tasks=t;
+    if(usingFirebase) fdb.ref(ROOT+"/tasks").set(t);
+    else localStorage.setItem(LOCAL_KEY, JSON.stringify(DB));
+  }
+  if(!DB.settings) DB.settings={};
+  if(!DB.settings.adminPw){
+    DB.settings.adminPw="1234";
+    if(usingFirebase) fdb.ref(ROOT+"/settings/adminPw").set("1234");
+    else localStorage.setItem(LOCAL_KEY, JSON.stringify(DB));
+  }
+}
+
+/* ---------------- 유틸 ---------------- */
+const DOW = ["일","월","화","수","목","금","토"];
+function ds(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function today(){ return ds(new Date()); }
+function hm(d){ d=d||new Date(); return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.style.display="block";
+  clearTimeout(t._tm); t._tm=setTimeout(()=>t.style.display="none",2200);
+}
+function activeTasks(){
+  return Object.entries(DB.tasks||{}).filter(([,t])=>t.active!==false).sort((a,b)=>(a[1].order||0)-(b[1].order||0));
+}
+function activeEmps(){
+  return Object.entries(DB.employees||{}).filter(([,e])=>!e.retired);
+}
+function taskName(id){ return (DB.tasks&&DB.tasks[id]&&DB.tasks[id].name)||"-"; }
+function rec(date,empId){ return ((DB.records||{})[date]||{})[empId]||null; }
+
+/* ---------------- 화면 전환 ---------------- */
+let currentScreen="cat";
+function go(name){
+  currentScreen=name;
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("show"));
+  document.getElementById("s-"+name).classList.add("show");
+  document.getElementById("admNav").style.display = name.startsWith("adm")?"flex":"none";
+  window.scrollTo(0,0);
+  rerender();
+}
+function admGo(name,i){
+  go(name);
+  document.querySelectorAll("#admNav button").forEach((b,j)=>b.classList.toggle("on",i===j));
+}
+function rerender(){
+  if(currentScreen==="cat") renderCats();
+  if(currentScreen==="name") renderNames();
+  if(currentScreen==="emphome") renderEmpHome();
+  if(currentScreen==="adm-daily") renderDaily();
+  if(currentScreen==="adm-emp") renderEmpAdmin();
+  if(currentScreen==="adm-prod"){ renderProd(); renderProdEntries(); }
+  if(currentScreen==="adm-att") renderAtt();
+}
+function closeModal(id){ document.getElementById(id).classList.remove("show"); }
+function openModal(id){ document.getElementById(id).classList.add("show"); }
+
+/* ---------------- 직원 진입 흐름 ---------------- */
+const TASK_ICONS = {"경주빵":"🥮","찰보리빵":"🌾","포장":"📦","배송":"🚚","기타":"➕"};
+let selTask=null, selEmp=null, pinBuf="";
+
+function renderCats(){
+  const g=document.getElementById("catGrid"); g.innerHTML="";
+  activeTasks().forEach(([id,t])=>{
+    const b=document.createElement("button");
+    b.innerHTML=(TASK_ICONS[t.name]?TASK_ICONS[t.name]+"<br>":"")+t.name;
+    b.onclick=()=>{ selTask=id; go("name"); };
+    g.appendChild(b);
+  });
+}
+function renderNames(){
+  document.getElementById("nameTitle").textContent=(TASK_ICONS[taskName(selTask)]||"")+" "+taskName(selTask);
+  const g=document.getElementById("nameGrid"); g.innerHTML="";
+  const list=activeEmps().filter(([,e])=>e.taskId===selTask);
+  if(list.length===0){ g.innerHTML='<div class="sub" style="grid-column:1/-1;text-align:center;padding:30px 0">이 업무에 등록된 직원이 없습니다.<br>관리자에게 문의해주세요.</div>'; }
+  list.forEach(([id,e])=>{
+    const b=document.createElement("button"); b.textContent=e.name;
+    b.onclick=()=>{ selEmp=id; pinBuf=""; renderPinDots();
+      document.getElementById("pinTitle").textContent=e.name+"님"; go("pin"); };
+    g.appendChild(b);
+  });
+}
+function renderPinDots(){
+  document.querySelectorAll("#pinDots i").forEach((d,i)=>d.classList.toggle("f",i<pinBuf.length));
+}
+function pinKey(n){
+  if(pinBuf.length>=4) return;
+  pinBuf+=n; renderPinDots();
+  if(pinBuf.length===4){
+    setTimeout(()=>{
+      const e=DB.employees[selEmp];
+      if(e && pinBuf===e.pin){ enterEmpHome(); }
+      else{ toast("비밀번호가 틀렸어요"); pinBuf=""; renderPinDots(); }
+    },150);
+  }
+}
+function pinBack(){ pinBuf=pinBuf.slice(0,-1); renderPinDots(); }
+function logoutEmp(){ selEmp=null; go("cat"); }
+
+/* ---------------- 직원 홈 ---------------- */
+let weekOffset=0;
+function enterEmpHome(){
+  weekOffset=0;
+  go("emphome");
+  checkPrevMonthConfirm();
+}
+function renderEmpHome(){
+  if(!selEmp||!DB.employees[selEmp]) return;
+  const e=DB.employees[selEmp];
+  document.getElementById("empHomeName").textContent=e.name+"님";
+  const d=new Date();
+  document.getElementById("liveDate").textContent=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일`;
+  const r=rec(today(),selEmp)||{};
+  const myTaskId = r.task || e.taskId;
+  document.getElementById("myTask").textContent=taskName(myTaskId);
+  let log=[];
+  if(r.in) log.push("출근 "+r.in);
+  if(r.out) log.push("퇴근 "+r.out);
+  if(r.early) log.push("조퇴 "+r.early);
+  (r.outings||[]).forEach(o=>log.push("외출 "+o.start+(o.end?"~"+o.end:"~")));
+  document.getElementById("todayLog").textContent = log.length? "오늘 기록 : "+log.join(" · ") : "오늘 기록 없음";
+  document.getElementById("empHomeStatus").textContent = r.in&&!r.out&&!r.early ? "근무중" : (r.out||r.early ? "퇴근" : "출근 전");
+  renderWeekCal();
+}
+function punch(kind){
+  if(!selEmp) return;
+  const t=today(), now=hm();
+  const r=rec(t,selEmp)||{};
+  const e=DB.employees[selEmp];
+  if(kind==="in"){
+    if(r.in && !confirm("이미 출근 기록("+r.in+")이 있어요.\n"+now+"(으)로 바꿀까요?")) return;
+    dbSet(`records/${t}/${selEmp}/in`, now);
+    if(!r.task) dbSet(`records/${t}/${selEmp}/task`, e.taskId);
+    toast("✅ 출근 "+now+" 기록됨");
+  }
+  if(kind==="out"){
+    if(r.out && !confirm("이미 퇴근 기록("+r.out+")이 있어요.\n"+now+"(으)로 바꿀까요?")) return;
+    dbSet(`records/${t}/${selEmp}/out`, now);
+    toast("✅ 퇴근 "+now+" 기록됨");
+  }
+  if(kind==="early"){
+    if(!confirm("조퇴로 기록할까요? ("+now+")")) return;
+    dbSet(`records/${t}/${selEmp}/early`, now);
+    dbSet(`records/${t}/${selEmp}/out`, now);
+    toast("✅ 조퇴 "+now+" 기록됨");
+  }
+  if(kind==="away"){
+    const outings=(r.outings||[]).slice();
+    const open=outings.findIndex(o=>!o.end);
+    if(open>=0){ outings[open].end=now; toast("✅ 외출 복귀 "+now); }
+    else{ outings.push({start:now}); toast("✅ 외출 시작 "+now); }
+    dbSet(`records/${t}/${selEmp}/outings`, outings);
+  }
+}
+function openTaskChange(){
+  const g=document.getElementById("taskChangeGrid"); g.innerHTML="";
+  activeTasks().forEach(([id,t])=>{
+    const b=document.createElement("button");
+    b.innerHTML=(TASK_ICONS[t.name]?TASK_ICONS[t.name]+"<br>":"")+t.name;
+    b.onclick=()=>{
+      dbSet(`records/${today()}/${selEmp}/task`, id);
+      closeModal("mTask"); toast("오늘 업무: "+t.name);
+    };
+    g.appendChild(b);
+  });
+  openModal("mTask");
+}
+/* --- 주간 캘린더 (휴무 기록) --- */
+let leaveDate=null;
+function weekStart(off){
+  const d=new Date(); d.setHours(0,0,0,0);
+  d.setDate(d.getDate()-((d.getDay()+6)%7)+off*7); // 월요일 시작
+  return d;
+}
+function moveWeek(dir){ weekOffset+=dir; renderWeekCal(); }
+function renderWeekCal(){
+  const start=weekStart(weekOffset);
+  const end=new Date(start); end.setDate(end.getDate()+6);
+  document.getElementById("weekLabel").textContent=`${start.getMonth()+1}/${start.getDate()} ~ ${end.getMonth()+1}/${end.getDate()}`;
+  const cal=document.getElementById("weekCal");
+  cal.innerHTML='<div class="dow">월</div><div class="dow">화</div><div class="dow">수</div><div class="dow">목</div><div class="dow">금</div><div class="dow" style="color:var(--blue)">토</div><div class="dow" style="color:var(--red)">일</div>';
+  const e=DB.employees[selEmp]||{};
+  for(let i=0;i<7;i++){
+    const d=new Date(start); d.setDate(d.getDate()+i);
+    const dstr=ds(d);
+    const r=rec(dstr,selEmp)||{};
+    const div=document.createElement("div");
+    div.className="day"; div.textContent=d.getDate();
+    const isOff=(e.daysOff||[]).includes(d.getDay());
+    if(r.leave==="연차"){div.classList.add("leave");div.innerHTML+="<small>연차</small>";}
+    else if(r.leave==="대체휴무"){div.classList.add("alt");div.innerHTML+="<small>대체</small>";}
+    else if(r.leave==="병가"){div.classList.add("sick");div.innerHTML+="<small>병가</small>";}
+    else if(isOff){div.classList.add("off");div.innerHTML+="<small>정기휴무</small>";}
+    div.onclick=()=>{
+      leaveDate=dstr;
+      document.getElementById("mLeaveTitle").textContent=`${d.getMonth()+1}월 ${d.getDate()}일 휴무 기록`;
+      openModal("mLeave");
+    };
+    cal.appendChild(div);
+  }
+}
+function setLeave(type){
+  if(!leaveDate) return;
+  const empId = adminSession ? adminLeaveEmp : selEmp;
+  if(type){ dbSet(`records/${leaveDate}/${empId}/leave`, type); dbSet(`records/${leaveDate}/${empId}/leaveBy`, adminSession?"admin":"self"); toast("✅ "+type+" 기록됨"); }
+  else{ dbSet(`records/${leaveDate}/${empId}/leave`, null); dbSet(`records/${leaveDate}/${empId}/leaveBy`, null); toast("기록을 지웠어요"); }
+  closeModal("mLeave");
+}
+/* --- 생산량 --- */
+function saveProduction(){
+  const g=parseInt(document.getElementById("prodGyeongju").value)||0;
+  const b=parseInt(document.getElementById("prodBori").value)||0;
+  if(g===0&&b===0){ toast("수량을 입력해주세요"); return; }
+  const entry={empId:selEmp, name:DB.employees[selEmp].name, gyeongju:g, bori:b, time:hm()};
+  dbSet(`production/${today()}/entries/${newId()}`, entry);
+  document.getElementById("prodGyeongju").value="";
+  document.getElementById("prodBori").value="";
+  toast("✅ 생산량 저장됨");
+}
+
+/* ---------------- 전월 출근부 확인/서명 ---------------- */
+let confirmMonth=null;
+function prevMonthStr(){
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function monthHasRecords(empId,ym){
+  return Object.entries(DB.records||{}).some(([date,recs])=>date.startsWith(ym)&&recs[empId]);
+}
+function checkPrevMonthConfirm(){
+  const ym=prevMonthStr();
+  const signed=((DB.signatures||{})[selEmp]||{})[ym];
+  if(!signed && monthHasRecords(selEmp,ym)){
+    confirmMonth=ym;
+    openConfirmModal();
+  }
+}
+function openConfirmModal(){
+  const [y,m]=confirmMonth.split("-").map(Number);
+  document.getElementById("mConfirmTitle").textContent=`${y}년 ${m}월 출근부 확인`;
+  document.getElementById("mConfirmTable").innerHTML=buildAttTable(selEmp,confirmMonth,false);
+  openModal("mConfirm");
+  setTimeout(initSignCanvas,100);
+}
+/* 관리자 전용: 출퇴근 시간 수정 (근태통계 화면) */
+function editCell(date,field,empId){
+  if(!adminSession) return;
+  const cur=(rec(date,empId)||{})[field]||"";
+  const v=prompt((field==="in"?"출근":"퇴근")+" 시간 수정 (예: 08:30)\n지우려면 빈칸", cur);
+  if(v===null) return;
+  const t=v.trim();
+  if(t && !/^\d{1,2}:\d{2}$/.test(t)){ toast("시간 형식이 올바르지 않아요 (예: 08:30)"); return; }
+  dbSet(`records/${date}/${empId}/${field}`, t||null);
+  setTimeout(renderAtt,300);
+}
+/* --- 서명 캔버스 --- */
+let signCtx=null, signDrawn=false;
+function initSignCanvas(){
+  const c=document.getElementById("signCanvas");
+  c.width=c.offsetWidth*2; c.height=c.offsetHeight*2;
+  signCtx=c.getContext("2d"); signCtx.scale(2,2);
+  signCtx.lineWidth=2.5; signCtx.lineCap="round"; signCtx.strokeStyle="#2B2724";
+  signDrawn=false;
+  let drawing=false;
+  const pos=ev=>{
+    const r=c.getBoundingClientRect();
+    const p=ev.touches?ev.touches[0]:ev;
+    return {x:p.clientX-r.left, y:p.clientY-r.top};
+  };
+  c.ontouchstart=c.onmousedown=ev=>{ev.preventDefault();drawing=true;const p=pos(ev);signCtx.beginPath();signCtx.moveTo(p.x,p.y);};
+  c.ontouchmove=c.onmousemove=ev=>{if(!drawing)return;ev.preventDefault();const p=pos(ev);signCtx.lineTo(p.x,p.y);signCtx.stroke();signDrawn=true;};
+  c.ontouchend=c.onmouseup=c.onmouseleave=()=>{drawing=false;};
+}
+function clearSign(){
+  const c=document.getElementById("signCanvas");
+  signCtx.clearRect(0,0,c.width,c.height); signDrawn=false;
+}
+function submitSign(){
+  if(!signDrawn){ toast("서명을 해주세요"); return; }
+  const dataUrl=document.getElementById("signCanvas").toDataURL("image/png");
+  dbSet(`signatures/${selEmp}/${confirmMonth}`, {img:dataUrl, signedAt:today()+" "+hm()});
+  closeModal("mConfirm");
+  toast("✅ 서명이 저장되었습니다. 감사합니다!");
+}
+
+/* ---------------- 관리자 ---------------- */
+let adminSession=false, adminLeaveEmp=null;
+function adminLoginAsk(){
+  const pw=prompt("관리자 비밀번호를 입력하세요");
+  if(pw===null) return;
+  if(pw===(DB.settings&&DB.settings.adminPw)){ adminSession=true; admGo("adm-daily",0);
+    document.getElementById("dailyDate").value=today(); renderDaily(); }
+  else toast("비밀번호가 틀렸어요");
+}
+function adminLogout(){ adminSession=false; go("cat"); }
+function changeAdminPw(){
+  const cur=prompt("현재 비밀번호"); if(cur===null) return;
+  if(cur!==DB.settings.adminPw){ toast("현재 비밀번호가 틀렸어요"); return; }
+  const nw=prompt("새 비밀번호"); if(!nw) return;
+  dbSet("settings/adminPw", nw); toast("✅ 비밀번호 변경됨");
+}
+
+/* --- 일일 업무상황표 --- */
+function renderDaily(){
+  const dInput=document.getElementById("dailyDate");
+  if(!dInput.value) dInput.value=today();
+  const date=dInput.value;
+  const d=new Date(date+"T00:00:00");
+  document.getElementById("dailyDateLabel").textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`;
+  const recs=(DB.records||{})[date]||{};
+  // 출근자 (업무별)
+  const byTask={};
+  activeTasks().forEach(([id])=>byTask[id]=[]);
+  Object.entries(recs).forEach(([empId,r])=>{
+    if(r.in && DB.employees[empId]){
+      const tid=r.task||DB.employees[empId].taskId;
+      if(!byTask[tid]) byTask[tid]=[];
+      byTask[tid].push({name:DB.employees[empId].name, in:r.in});
+    }
+  });
+  let html="";
+  activeTasks().forEach(([id,t])=>{
+    const list=byTask[id]||[];
+    html+=`<div class="daily-cat"><div class="cat-h">${TASK_ICONS[t.name]||""} ${t.name} <span class="sub">${list.length}명</span></div>
+      <div class="name-tags">${list.map(p=>`<span>${p.name} ${p.in}</span>`).join("")||'<span style="background:#F1EDE7;color:var(--sub)">없음</span>'}</div></div>`;
+  });
+  document.getElementById("dailyPresent").innerHTML=html;
+  // 미출근자
+  const dow=d.getDay();
+  const groups={"연차":[],"대체휴무":[],"병가":[],"정기휴무":[],"미입력":[]};
+  activeEmps().forEach(([empId,e])=>{
+    const r=recs[empId]||{};
+    if(r.in) return;
+    if(r.leave) groups[r.leave]?groups[r.leave].push({empId,e,by:r.leaveBy}):groups["미입력"].push({empId,e});
+    else if((e.daysOff||[]).includes(dow)) groups["정기휴무"].push({empId,e});
+    else groups["미입력"].push({empId,e});
+  });
+  const chipCls={"연차":"b","대체휴무":"p","병가":"r","정기휴무":"g","미입력":"a"};
+  let ah="";
+  Object.entries(groups).forEach(([g,list])=>{
+    if(list.length===0) return;
+    ah+=`<div style="margin-bottom:12px"><div style="margin-bottom:6px"><span class="chip ${chipCls[g]}">${g==="미입력"?"미입력 (사유 없음)":g}</span></div>`;
+    list.forEach(({empId,e,by})=>{
+      ah+=`<div class="absent-row"><b>${e.name}</b>`;
+      if(g==="미입력") ah+=`<button class="mini-btn" onclick="adminSetLeave('${empId}','${date}')">사유 입력</button>`;
+      else if(g!=="정기휴무") ah+=`<span class="sub">${by==="admin"?"관리자 입력":"본인 입력"}</span> <button class="mini-btn" onclick="adminSetLeave('${empId}','${date}')">수정</button>`;
+      ah+=`</div>`;
+    });
+    ah+=`</div>`;
+  });
+  document.getElementById("dailyAbsent").innerHTML=ah||'<div class="sub" style="text-align:center;padding:14px 0">미출근자가 없습니다 🎉</div>';
+}
+function adminSetLeave(empId,date){
+  adminLeaveEmp=empId; leaveDate=date;
+  const d=new Date(date+"T00:00:00");
+  document.getElementById("mLeaveTitle").textContent=`${DB.employees[empId].name} · ${d.getMonth()+1}월 ${d.getDate()}일`;
+  openModal("mLeave");
+}
+
+/* --- 직원 관리 --- */
+function buildDowChecks(containerId, selected){
+  const c=document.getElementById(containerId); c.innerHTML="";
+  DOW.forEach((name,i)=>{
+    const lb=document.createElement("label");
+    if((selected||[]).includes(i)) lb.classList.add("on");
+    lb.innerHTML=`<input type="checkbox" value="${i}" ${(selected||[]).includes(i)?"checked":""}>${name}`;
+    lb.onclick=ev=>{ ev.preventDefault();
+      const inp=lb.querySelector("input"); inp.checked=!inp.checked;
+      lb.classList.toggle("on",inp.checked); };
+    c.appendChild(lb);
+  });
+}
+function getDowChecks(containerId){
+  return [...document.querySelectorAll(`#${containerId} input:checked`)].map(i=>parseInt(i.value));
+}
+function fillTaskSelect(selId, cur){
+  const s=document.getElementById(selId); s.innerHTML="";
+  activeTasks().forEach(([id,t])=>{
+    const o=document.createElement("option"); o.value=id; o.textContent=t.name;
+    if(id===cur) o.selected=true;
+    s.appendChild(o);
+  });
+}
+let empTabMode="cur";
+function empTab(el,which){
+  empTabMode=which;
+  el.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("on"));
+  el.classList.add("on");
+  document.getElementById("empListCur").style.display=which==="cur"?"block":"none";
+  document.getElementById("empRetWrap").style.display=which==="ret"?"block":"none";
+}
+function renderEmpAdmin(){
+  fillTaskSelect("rTask");
+  if(document.getElementById("rDaysOff").children.length===0) buildDowChecks("rDaysOff",[]);
+  const cur=[], ret=[];
+  Object.entries(DB.employees||{}).forEach(([id,e])=>(e.retired?ret:cur).push([id,e]));
+  document.getElementById("curCnt").textContent=cur.length;
+  document.getElementById("retCnt").textContent=ret.length;
+  document.getElementById("empListCur").innerHTML = cur.length ? cur.map(([id,e])=>`
+    <div class="emp-row"><div class="avatar">${e.name[0]}</div>
+      <div class="emp-info"><div class="emp-name">${e.name}</div>
+      <div class="emp-meta">${taskName(e.taskId)} · 입사 ${e.joinDate||"-"} · 휴무 ${(e.daysOff||[]).map(i=>DOW[i]).join(",")||"없음"}</div></div>
+      <button class="mini-btn" onclick="openEmpEdit('${id}')">수정</button></div>`).join("")
+    : '<div class="sub" style="text-align:center;padding:14px 0">등록된 직원이 없습니다. 아래에서 등록해주세요.</div>';
+  document.getElementById("empListRet").innerHTML = ret.length ? ret.map(([id,e])=>`
+    <div class="emp-row"><div class="avatar" style="opacity:.5">${e.name[0]}</div>
+      <div class="emp-info"><div class="emp-name" style="color:var(--sub)">${e.name}</div>
+      <div class="emp-meta">퇴사 ${e.retireDate||"-"} · 근무기록 보관</div></div>
+      <button class="mini-btn" onclick="unretireEmp('${id}')">복직</button></div>`).join("")
+    : '<div class="sub" style="text-align:center;padding:14px 0">퇴사자가 없습니다.</div>';
+  renderTaskManage();
+}
+function registerEmp(){
+  const name=document.getElementById("rName").value.trim();
+  const pin=document.getElementById("rPin").value.trim();
+  if(!name){ toast("이름을 입력해주세요"); return; }
+  if(!/^\d{4}$/.test(pin)){ toast("비밀번호는 숫자 4자리로 해주세요"); return; }
+  const emp={
+    name, birth:document.getElementById("rBirth").value||"",
+    joinDate:document.getElementById("rJoin").value||"",
+    taskId:document.getElementById("rTask").value,
+    daysOff:getDowChecks("rDaysOff"), pin, retired:false
+  };
+  dbSet("employees/"+newId(), emp);
+  ["rName","rBirth","rJoin","rPin"].forEach(id=>document.getElementById(id).value="");
+  buildDowChecks("rDaysOff",[]);
+  toast("✅ "+name+"님 등록 완료");
+}
+let editEmpId=null;
+function openEmpEdit(id){
+  editEmpId=id; const e=DB.employees[id];
+  document.getElementById("eName").value=e.name;
+  document.getElementById("eBirth").value=e.birth||"";
+  document.getElementById("eJoin").value=e.joinDate||"";
+  fillTaskSelect("eTask", e.taskId);
+  buildDowChecks("eDaysOff", e.daysOff||[]);
+  document.getElementById("ePin").value=e.pin||"";
+  openModal("mEdit");
+}
+function saveEmpEdit(){
+  const pin=document.getElementById("ePin").value.trim();
+  if(!/^\d{4}$/.test(pin)){ toast("비밀번호는 숫자 4자리로 해주세요"); return; }
+  const e=Object.assign({},DB.employees[editEmpId],{
+    name:document.getElementById("eName").value.trim(),
+    birth:document.getElementById("eBirth").value,
+    joinDate:document.getElementById("eJoin").value,
+    taskId:document.getElementById("eTask").value,
+    daysOff:getDowChecks("eDaysOff"), pin
+  });
+  dbSet("employees/"+editEmpId, e);
+  closeModal("mEdit"); toast("✅ 저장되었습니다");
+}
+function retireEmp(){
+  const e=DB.employees[editEmpId];
+  const d=prompt(e.name+"님의 퇴사일을 입력하세요 (예: 2026-07-31)", today());
+  if(!d) return;
+  dbSet(`employees/${editEmpId}/retired`, true);
+  dbSet(`employees/${editEmpId}/retireDate`, d);
+  closeModal("mEdit"); toast(e.name+"님 퇴사 처리됨");
+}
+function unretireEmp(id){
+  if(!confirm(DB.employees[id].name+"님을 복직 처리할까요?")) return;
+  dbSet(`employees/${id}/retired`, false);
+  dbSet(`employees/${id}/retireDate`, null);
+}
+/* --- 업무 카테고리 관리 --- */
+function renderTaskManage(){
+  const c=document.getElementById("taskManage");
+  c.innerHTML = activeTasks().map(([id,t])=>`
+    <div class="absent-row"><b>${TASK_ICONS[t.name]||""} ${t.name}</b>
+      <div style="display:flex;gap:6px">
+        <button class="mini-btn" onclick="renameTask('${id}')">이름 수정</button>
+        <button class="mini-btn" style="color:var(--red)" onclick="removeTask('${id}')">삭제</button>
+      </div></div>`).join("") +
+    `<div style="height:8px"></div><button class="btn btn-ghost" style="font-size:16px;padding:13px" onclick="addTask()">+ 업무 추가</button>`;
+}
+function addTask(){
+  const n=prompt("추가할 업무 이름"); if(!n) return;
+  const order=activeTasks().length;
+  dbSet("tasks/"+newId(), {name:n.trim(), order, active:true});
+}
+function renameTask(id){
+  const n=prompt("새 이름", DB.tasks[id].name); if(!n) return;
+  dbSet(`tasks/${id}/name`, n.trim());
+}
+function removeTask(id){
+  const used=activeEmps().some(([,e])=>e.taskId===id);
+  if(used){ toast("이 업무에 배정된 직원이 있어 삭제할 수 없어요"); return; }
+  if(!confirm(`"${DB.tasks[id].name}" 업무를 삭제할까요?`)) return;
+  dbSet(`tasks/${id}/active`, false);
+}
+
+/* --- 생산 통계 --- */
+let prodMode="week", prodOffset=0, prodChart=null;
+function prodTabSel(el){ el.parentElement.querySelectorAll("button").forEach(b=>b.classList.remove("on")); el.classList.add("on"); prodOffset=0; }
+function moveProd(dir){ prodOffset+=dir; renderProd(); }
+function dailyTotals(date){
+  const p=(DB.production||{})[date];
+  if(!p) return null;
+  if(p.confirmed) return p.confirmed;
+  let g=0,b=0;
+  Object.values(p.entries||{}).forEach(e=>{g+=e.gyeongju||0;b+=e.bori||0;});
+  return (g||b)?{gyeongju:g,bori:b}:null;
+}
+function renderProd(){
+  const labels=[], gData=[], bData=[], rows=[];
+  if(prodMode==="week"){
+    const start=weekStart(prodOffset);
+    const end=new Date(start); end.setDate(end.getDate()+6);
+    document.getElementById("prodLabel").textContent=`${start.getMonth()+1}/${start.getDate()} ~ ${end.getMonth()+1}/${end.getDate()}`;
+    document.getElementById("prodTableTitle").textContent="주간 집계표";
+    for(let i=0;i<7;i++){
+      const d=new Date(start); d.setDate(d.getDate()+i);
+      const t=dailyTotals(ds(d))||{gyeongju:0,bori:0};
+      labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+      gData.push(t.gyeongju); bData.push(t.bori);
+      rows.push([`${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`, t.gyeongju, t.bori]);
+    }
+  }else{
+    const now=new Date(); const year=now.getFullYear()+prodOffset;
+    document.getElementById("prodLabel").textContent=`${year}년`;
+    document.getElementById("prodTableTitle").textContent=`${year}년 월별 집계표`;
+    const monthly={};
+    Object.keys(DB.production||{}).forEach(date=>{
+      if(!date.startsWith(year+"-")) return;
+      const m=parseInt(date.split("-")[1]);
+      const t=dailyTotals(date); if(!t) return;
+      if(!monthly[m]) monthly[m]={g:0,b:0};
+      monthly[m].g+=t.gyeongju; monthly[m].b+=t.bori;
+    });
+    for(let m=1;m<=12;m++){
+      const t=monthly[m]||{g:0,b:0};
+      labels.push(m+"월"); gData.push(t.g); bData.push(t.b);
+      rows.push([m+"월", t.g, t.b]);
+    }
+  }
+  if(prodChart) prodChart.destroy();
+  prodChart=new Chart(document.getElementById("prodChart"),{
+    type:"bar",
+    data:{labels,datasets:[
+      {label:"경주빵",data:gData,backgroundColor:"#3F6847"},
+      {label:"찰보리빵",data:bData,backgroundColor:"#B97F24"}]},
+    options:{responsive:true,plugins:{legend:{position:"bottom"}}}
+  });
+  document.getElementById("prodTable").innerHTML=`<table class="tt">
+    <tr><th>${prodMode==="week"?"날짜":"월"}</th><th>경주빵</th><th>찰보리빵</th><th>합계</th></tr>
+    ${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1].toLocaleString()}</td><td>${r[2].toLocaleString()}</td><td><b>${(r[1]+r[2]).toLocaleString()}</b></td></tr>`).join("")}
+    </table>`;
+  window._prodRows=rows;
+}
+function renderProdEntries(){
+  const dInput=document.getElementById("prodEditDate");
+  if(!dInput.value) dInput.value=today();
+  const date=dInput.value;
+  const p=(DB.production||{})[date]||{};
+  const entries=Object.entries(p.entries||{});
+  let html="";
+  if(entries.length===0) html='<div class="sub" style="text-align:center;padding:10px 0">이 날짜에 입력된 기록이 없습니다</div>';
+  else{
+    entries.forEach(([eid,e])=>{
+      html+=`<div class="absent-row"><span><b>${e.name}</b> <span class="sub">${e.time||""}</span><br>
+        <span class="sub">경주빵 ${e.gyeongju||0} · 찰보리빵 ${e.bori||0}</span></span>
+        <div style="display:flex;gap:6px">
+          <button class="mini-btn" onclick="pickProdEntry('${date}','${eid}')">이 기록 선택</button>
+          <button class="mini-btn" style="color:var(--red)" onclick="delProdEntry('${date}','${eid}')">삭제</button>
+        </div></div>`;
+    });
+  }
+  const conf=p.confirmed;
+  html+=`<div style="margin-top:10px;padding:12px;background:var(--brand-soft);border-radius:12px">
+    <b style="color:var(--brand)">확정 수량</b> <span class="sub">${conf?`경주빵 ${conf.gyeongju} · 찰보리빵 ${conf.bori}`:"(미확정 — 입력 합계 사용중)"}</span>
+    <div style="height:8px"></div>
+    <button class="mini-btn" onclick="editConfirmed('${date}')">직접 수정</button></div>`;
+  document.getElementById("prodEntries").innerHTML=html;
+}
+function pickProdEntry(date,eid){
+  const e=DB.production[date].entries[eid];
+  dbSet(`production/${date}/confirmed`, {gyeongju:e.gyeongju||0, bori:e.bori||0});
+  toast("✅ "+e.name+"님 기록으로 확정");
+  setTimeout(()=>{renderProdEntries();renderProd();},300);
+}
+function delProdEntry(date,eid){
+  if(!confirm("이 기록을 삭제할까요?")) return;
+  dbSet(`production/${date}/entries/${eid}`, null);
+  setTimeout(()=>{renderProdEntries();renderProd();},300);
+}
+function editConfirmed(date){
+  const cur=((DB.production||{})[date]||{}).confirmed||{};
+  const g=prompt("경주빵 확정 수량", cur.gyeongju!=null?cur.gyeongju:""); if(g===null) return;
+  const b=prompt("찰보리빵 확정 수량", cur.bori!=null?cur.bori:""); if(b===null) return;
+  dbSet(`production/${date}/confirmed`, {gyeongju:parseInt(g)||0, bori:parseInt(b)||0});
+  setTimeout(()=>{renderProdEntries();renderProd();},300);
+}
+function downloadProd(){
+  const rows=window._prodRows||[];
+  let csv="\uFEFF구분,경주빵,찰보리빵,합계\n";
+  rows.forEach(r=>csv+=`${r[0]},${r[1]},${r[2]},${r[1]+r[2]}\n`);
+  dlFile(csv, "생산집계_"+document.getElementById("prodLabel").textContent.replace(/[\s/~]/g,"")+".csv");
+}
+function dlFile(content, name){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"}));
+  a.download=name; a.click();
+}
+
+/* --- 근태 통계 --- */
+function buildAttTable(empId, ym, editable){
+  const e=DB.employees[empId]; if(!e) return "";
+  const [y,m]=ym.split("-").map(Number);
+  const last=new Date(y,m,0).getDate();
+  const todayStr=today();
+  let html=`<table class="tt"><tr><th>날짜</th><th>출근</th><th>퇴근</th><th>휴무사유</th><th>비고</th></tr>`;
+  const chipMap={"연차":"b","대체휴무":"p","병가":"r"};
+  for(let d=1;d<=last;d++){
+    const dt=new Date(y,m-1,d);
+    const dstr=ds(dt);
+    const r=rec(dstr,empId)||{};
+    const isOff=(e.daysOff||[]).includes(dt.getDay());
+    const past = dstr<=todayStr;
+    let reason="-", note=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:"~")).join(", ");
+    if(r.early) note=(note?note+", ":"")+"조퇴 "+r.early;
+    if(r.leave) reason=`<span class="chip ${chipMap[r.leave]||"a"}">${r.leave}</span>`;
+    else if(isOff && !r.in) reason='<span style="color:var(--sub)">정기휴무</span>';
+    else if(past && !r.in) reason='<span class="chip a">기타(미입력)</span>';
+    const inCell = editable ? `<td class="editable" onclick="editCell('${dstr}','in','${empId}')">${r.in||"－"}</td>` : `<td>${r.in||"-"}</td>`;
+    const outCell = editable ? `<td class="editable" onclick="editCell('${dstr}','out','${empId}')">${r.out||"－"}</td>` : `<td>${r.out||"-"}</td>`;
+    html+=`<tr><td>${m}/${d}(${DOW[dt.getDay()]})</td>${inCell}${outCell}<td>${reason}</td><td style="font-size:11px">${note}</td></tr>`;
+  }
+  return html+"</table>";
+}
+function calcLeave(e){
+  if(!e.joinDate) return {earned:0,usedL:0,usedA:0};
+  const join=new Date(e.joinDate), now=new Date();
+  const years=(now-join)/(365.25*24*3600*1000);
+  let earned;
+  if(years<1){ earned=Math.min(11, Math.floor(years*12)); }
+  else{ earned=Math.min(25, 15+Math.floor((Math.floor(years)-1)/2)); }
+  // 올해 사용량
+  const yr=now.getFullYear()+"-";
+  let usedL=0, usedA=0;
+  Object.entries(DB.records||{}).forEach(([date,recs])=>{
+    if(!date.startsWith(yr)) return;
+    Object.entries(recs).forEach(([empId,r])=>{
+      if(empId!==e._id) return;
+      if(r.leave==="연차") usedL++;
+      if(r.leave==="대체휴무") usedA++;
+    });
+  });
+  return {earned,usedL,usedA};
+}
+function renderAtt(){
+  const sel=document.getElementById("attEmp");
+  const emps=activeEmps();
+  if(sel.options.length!==emps.length){
+    const cur=sel.value; sel.innerHTML="";
+    emps.forEach(([id,e])=>{ const o=document.createElement("option");o.value=id;o.textContent=e.name;sel.appendChild(o); });
+    if(cur) sel.value=cur;
+  }
+  const mInput=document.getElementById("attMonth");
+  if(!mInput.value){ mInput.value=today().slice(0,7); }
+  const empId=sel.value, ym=mInput.value;
+  if(!empId){ document.getElementById("attTable").innerHTML='<div class="sub">직원을 먼저 등록해주세요</div>'; return; }
+  const e=DB.employees[empId];
+  const [y,m]=ym.split("-").map(Number);
+  document.getElementById("attTitle").textContent=`${e.name} · ${m}월 출근표`;
+  document.getElementById("attTaskChip").textContent=taskName(e.taskId);
+  document.getElementById("attTable").innerHTML=buildAttTable(empId,ym,true);
+  const sig=((DB.signatures||{})[empId]||{})[ym];
+  document.getElementById("attSign").innerHTML = sig
+    ? `<img class="sign-img" src="${sig.img}"><div class="sub">서명일: ${sig.signedAt}</div>`
+    : '<div class="sub" style="padding:8px 0">아직 서명되지 않았습니다 (직원이 다음 달 초 로그인 시 확인·서명)</div>';
+  // 연차 표
+  let lt=`<table class="tt"><tr><th>이름</th><th>입사일</th><th>발생 연차</th><th>사용(연차)</th><th>사용(대체)</th><th>잔여</th></tr>`;
+  emps.forEach(([id,emp])=>{
+    emp._id=id;
+    const c=calcLeave(emp);
+    lt+=`<tr class="year-summary"><td>${emp.name}</td><td>${emp.joinDate||"-"}</td><td>${c.earned}</td><td>${c.usedL}</td><td>${c.usedA}</td><td><b>${c.earned-c.usedL-c.usedA}</b></td></tr>`;
+  });
+  document.getElementById("leaveTable").innerHTML=lt+"</table>";
+}
+function downloadAtt(){
+  const empId=document.getElementById("attEmp").value;
+  const ym=document.getElementById("attMonth").value;
+  if(!empId||!ym) return;
+  const e=DB.employees[empId];
+  const [y,m]=ym.split("-").map(Number);
+  const last=new Date(y,m,0).getDate();
+  let csv=`\uFEFF${e.name} ${y}년 ${m}월 출근표\n날짜,출근,퇴근,휴무사유,비고\n`;
+  for(let d=1;d<=last;d++){
+    const dt=new Date(y,m-1,d), dstr=ds(dt), r=rec(dstr,empId)||{};
+    const isOff=(e.daysOff||[]).includes(dt.getDay());
+    let reason="";
+    if(r.leave) reason=r.leave;
+    else if(isOff&&!r.in) reason="정기휴무";
+    else if(dstr<=today()&&!r.in) reason="기타(미입력)";
+    let note=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:"")).join(" / ");
+    if(r.early) note+=(note?" / ":"")+"조퇴 "+r.early;
+    csv+=`${m}/${d}(${DOW[dt.getDay()]}),${r.in||""},${r.out||""},${reason},${note}\n`;
+  }
+  csv+=`\n연차 정리 (올해 기준)\n이름,입사일,발생,사용(연차),사용(대체),잔여\n`;
+  activeEmps().forEach(([id,emp])=>{
+    emp._id=id; const c=calcLeave(emp);
+    csv+=`${emp.name},${emp.joinDate||""},${c.earned},${c.usedL},${c.usedA},${c.earned-c.usedL-c.usedA}\n`;
+  });
+  dlFile(csv, `근태기록_${e.name}_${ym}.csv`);
+}
+
+/* ---------------- 시계 ---------------- */
+setInterval(()=>{
+  const d=new Date(),p=n=>String(n).padStart(2,"0");
+  const el=document.getElementById("liveClock");
+  if(el)el.textContent=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+},1000);
+
+initData();
+</script>
+</body>
+</html>
