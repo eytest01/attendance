@@ -50,6 +50,20 @@ label{font-size:14px;color:var(--sub);display:block;margin:12px 0 6px;font-weigh
 .name-grid button:active{background:var(--brand-soft);border-color:var(--brand)}
 .name-grid .navatar{width:64px;height:64px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800}
 .name-grid .nname{font-size:24px;font-weight:800}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pay-grid > div{display:flex;flex-direction:column;gap:3px}
+.pay-grid span{font-size:12px;color:var(--sub);font-weight:700}
+.pay-grid input{padding:10px;font-size:15px;text-align:right}
+.pay-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.pay{border-collapse:collapse;font-size:12px;white-space:nowrap}
+table.pay th,table.pay td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+table.pay th{background:#F1EDE7;font-weight:800;text-align:center;position:sticky;top:0}
+table.pay td.name,table.pay th.name{text-align:center;position:sticky;left:0;background:#fff;font-weight:700}
+table.pay th.name{background:#F1EDE7;z-index:2}
+table.pay td.editable{cursor:pointer;color:var(--blue);background:#F6FAFC}
+table.pay td.sum{font-weight:800;background:#F3F6F3}
+table.pay td.total{font-weight:800;background:var(--brand-soft);color:var(--brand)}
+table.pay tr:hover td{background:#FCFBF9}
 .pin-dots{display:flex;gap:16px;justify-content:center;margin:22px 0}
 .pin-dots i{width:18px;height:18px;border-radius:50%;background:var(--line)}
 .pin-dots i.f{background:var(--brand)}
@@ -275,7 +289,8 @@ table.tt th{background:#F1EDE7;font-weight:800}
   <div class="section-t">➕ 직원 등록</div>
   <div class="card">
     <label>이름</label><input id="rName" placeholder="홍길동">
-    <label>생년월일</label><input id="rBirth" type="date">
+    <label>생년월일 (성별코드 포함 · 예: 1997-12-03-2)</label>
+    <input id="rBirth" placeholder="1997-12-03-2  (끝자리 홀수=남, 짝수=여)">
     <label>입사일</label><input id="rJoin" type="date">
     <label>업무</label><select id="rTask"></select>
     <label>요일별 근무시간 (빈칸 또는 0 = 휴무)</label>
@@ -286,6 +301,17 @@ table.tt th{background:#F1EDE7;font-weight:800}
       <option value="day">일수로 계산 (연차 1일 · 반차 0.5일 · 반반차 0.25일)</option>
       <option value="hour">시간으로 계산 (그 요일 근무시간만큼 차감)</option>
     </select>
+    <label style="margin-top:16px;color:var(--brand);font-weight:800">💰 급여 항목 (원)</label>
+    <div class="pay-grid">
+      <div><span>기본급</span><input type="number" id="rPayBase" inputmode="numeric" placeholder="0"></div>
+      <div><span>식비</span><input type="number" id="rPayMeal" inputmode="numeric" placeholder="0"></div>
+      <div><span>차량유지비</span><input type="number" id="rPayCar" inputmode="numeric" placeholder="0"></div>
+      <div><span>연가수당</span><input type="number" id="rPayAnnual" inputmode="numeric" placeholder="0"></div>
+      <div><span>휴일근로수당</span><input type="number" id="rPayHoliday" inputmode="numeric" placeholder="0"></div>
+      <div><span>직책수당</span><input type="number" id="rPayPosition" inputmode="numeric" placeholder="0"></div>
+      <div><span>성과급</span><input type="number" id="rPayBonus" inputmode="numeric" placeholder="0"></div>
+    </div>
+    <div class="sub" style="font-size:12px;margin-top:6px">※ 통상임금 = 기본급 + 식비 + 차량유지비 (초과근무수당 계산 기준)</div>
     <label>비밀번호 (2~4자리 숫자)</label><input id="rPin" maxlength="4" placeholder="예: 12 또는 1234" inputmode="numeric">
     <div style="height:14px"></div>
     <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="registerEmp()">등록하기</button>
@@ -297,6 +323,20 @@ table.tt th{background:#F1EDE7;font-weight:800}
   <div class="section-t">🔑 관리자 비밀번호</div>
   <div class="card">
     <button class="btn btn-ghost" style="font-size:16px;padding:13px" onclick="changeAdminPw()">비밀번호 변경</button>
+  </div>
+
+  <div class="section-t">⚙️ 4대보험·소득세 요율</div>
+  <div class="card">
+    <div class="sub" style="margin-bottom:8px">근사 계산에 쓰이는 요율(%)입니다. 매년 바뀌니 필요 시 수정하세요.</div>
+    <div class="pay-grid">
+      <div><span>국민연금 %</span><input type="number" step="0.001" id="rateP" inputmode="decimal"></div>
+      <div><span>건강보험 %</span><input type="number" step="0.001" id="rateH" inputmode="decimal"></div>
+      <div><span>장기요양 %(건보료의)</span><input type="number" step="0.01" id="rateC" inputmode="decimal"></div>
+      <div><span>고용보험 %</span><input type="number" step="0.001" id="rateE" inputmode="decimal"></div>
+      <div><span>소득세 근사 %</span><input type="number" step="0.1" id="rateI" inputmode="decimal"></div>
+    </div>
+    <div style="height:10px"></div>
+    <button class="btn btn-ghost" style="font-size:15px;padding:12px" onclick="savePayRates()">요율 저장</button>
   </div>
 </div>
 
@@ -357,12 +397,34 @@ table.tt th{background:#F1EDE7;font-weight:800}
   <div style="height:20px"></div>
 </div>
 
+<!-- ===== 관리자: 급여관리 ===== -->
+<div class="screen pad-bottom" id="s-adm-pay">
+  <div class="row" style="margin-bottom:10px">
+    <div class="h1">급여 관리</div>
+    <input type="month" id="payMonth" style="width:auto;padding:8px;font-size:14px" onchange="renderPay()">
+  </div>
+  <div class="sub" style="margin-bottom:12px">파란 칸(4대보험·소득세·지방세)은 눌러서 바로 수정할 수 있어요. 초과근무수당은 근태 데이터로 자동 계산돼요.</div>
+  <div class="card">
+    <div class="pay-table-wrap"><div id="payTable"></div></div>
+  </div>
+  <div class="card">
+    <div class="h2" style="margin-bottom:6px">📗 공제 엑셀 업로드</div>
+    <div class="sub" style="margin-bottom:10px">양식을 받아 4대보험·소득세·지방세를 채워 올리면 반영됩니다. <b>빈칸은 기존값이 유지</b>돼요 (일부만 채워도 OK).</div>
+    <button class="btn dl-btn" style="font-size:15px;padding:12px;margin-bottom:8px" onclick="downloadPayTemplate()">⬇ 공제 입력 양식 다운로드</button>
+    <input type="file" id="payUpload" accept=".csv" style="display:none" onchange="uploadPayDeductions(event)">
+    <button class="btn btn-ghost" style="font-size:15px;padding:12px" onclick="document.getElementById('payUpload').click()">⬆ 채운 양식 업로드</button>
+  </div>
+  <button class="btn dl-btn" style="font-size:16px;padding:14px" onclick="downloadPay()">⬇ 급여대장 다운로드 (엑셀)</button>
+  <div style="height:20px"></div>
+</div>
+
 <!-- ===== 하단 관리자 네비 ===== -->
 <div class="nav" id="admNav">
   <button class="on" onclick="admGo('adm-daily',0)"><span class="ic">📋</span>일일상황</button>
   <button onclick="admGo('adm-emp',1)"><span class="ic">👥</span>직원</button>
   <button onclick="admGo('adm-prod',2)"><span class="ic">📈</span>생산통계</button>
   <button onclick="admGo('adm-att',3)"><span class="ic">🗓</span>근태통계</button>
+  <button onclick="admGo('adm-pay',4)"><span class="ic">💰</span>급여관리</button>
   <button onclick="adminLogout()"><span class="ic">🚪</span>나가기</button>
 </div>
 
@@ -371,7 +433,8 @@ table.tt th{background:#F1EDE7;font-weight:800}
   <div class="modal">
     <div class="h2" style="margin-bottom:6px">직원 정보 수정</div>
     <label>이름</label><input id="eName">
-    <label>생년월일</label><input id="eBirth" type="date">
+    <label>생년월일 (성별코드 포함 · 예: 1997-12-03-2)</label>
+    <input id="eBirth" placeholder="1997-12-03-2">
     <label>입사일</label><input id="eJoin" type="date">
     <label>업무</label><select id="eTask"></select>
     <label>요일별 근무시간 (빈칸 또는 0 = 휴무)</label>
@@ -382,6 +445,19 @@ table.tt th{background:#F1EDE7;font-weight:800}
       <option value="day">일수로 계산 (연차 1일 · 반차 0.5일 · 반반차 0.25일)</option>
       <option value="hour">시간으로 계산 (그 요일 근무시간만큼 차감)</option>
     </select>
+    <label style="margin-top:16px;color:var(--brand);font-weight:800">💰 급여 항목 (원)</label>
+    <div class="pay-grid">
+      <div><span>기본급</span><input type="number" id="ePayBase" inputmode="numeric" placeholder="0"></div>
+      <div><span>식비</span><input type="number" id="ePayMeal" inputmode="numeric" placeholder="0"></div>
+      <div><span>차량유지비</span><input type="number" id="ePayCar" inputmode="numeric" placeholder="0"></div>
+      <div><span>연가수당</span><input type="number" id="ePayAnnual" inputmode="numeric" placeholder="0"></div>
+      <div><span>휴일근로수당</span><input type="number" id="ePayHoliday" inputmode="numeric" placeholder="0"></div>
+      <div><span>직책수당</span><input type="number" id="ePayPosition" inputmode="numeric" placeholder="0"></div>
+      <div><span>성과급</span><input type="number" id="ePayBonus" inputmode="numeric" placeholder="0"></div>
+    </div>
+    <label>급여 변경 반영월 (이 달부터 새 급여 적용)</label>
+    <input type="month" id="ePayEffMonth">
+    <div class="sub" style="font-size:12px;margin-top:4px">※ 비워두면 기존 급여를 그대로 수정합니다. 월을 지정하면 그 달부터 새 급여로 계산되고 과거 달은 예전 금액이 유지됩니다.</div>
     <label>비밀번호 (2~4자리 숫자)</label><input id="ePin" maxlength="4" inputmode="numeric">
     <div style="height:16px"></div>
     <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="saveEmpEdit()">저장</button>
@@ -462,13 +538,13 @@ table.tt th{background:#F1EDE7;font-weight:800}
    데이터는 "hr_v1" 경로에 저장되어 가계부와 섞이지 않습니다.
 ================================================================ */
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCKScTlKUfdzGjXX2A8v4kCAjOSG9ddLLM",
-  authDomain: "budget-ab15b.firebaseapp.com",
-  databaseURL: "https://budget-ab15b-default-rtdb.firebaseio.com",
-  projectId: "budget-ab15b",
-  storageBucket: "budget-ab15b.firebasestorage.app",
-  messagingSenderId: "1038388612689",
-  appId: "1:1038388612689:web:830d6ec56b0ba4a203f270"
+  apiKey: "여기에_붙여넣기",
+  authDomain: "여기에_붙여넣기",
+  databaseURL: "여기에_붙여넣기",
+  projectId: "여기에_붙여넣기",
+  storageBucket: "여기에_붙여넣기",
+  messagingSenderId: "여기에_붙여넣기",
+  appId: "여기에_붙여넣기"
 };
 const ROOT = "hr_v1";
 
@@ -565,6 +641,7 @@ function rerender(){
   if(currentScreen==="adm-emp") renderEmpAdmin();
   if(currentScreen==="adm-prod"){ renderProd(); renderProdEntries(); }
   if(currentScreen==="adm-att") renderAtt();
+  if(currentScreen==="adm-pay") renderPay();
 }
 function closeModal(id){ document.getElementById(id).classList.remove("show"); }
 function openModal(id){ document.getElementById(id).classList.add("show"); }
@@ -1035,6 +1112,19 @@ function renderEmpAdmin(){
       <button class="mini-btn" onclick="unretireEmp('${id}')">복직</button></div>`).join("")
     : '<div class="sub" style="text-align:center;padding:14px 0">퇴사자가 없습니다.</div>';
   renderTaskManage();
+  // 요율 입력칸 채우기
+  const rt=payRates();
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&document.activeElement!==el)el.value=v;};
+  set("rateP",rt.pension); set("rateH",rt.health); set("rateC",rt.care); set("rateE",rt.employment); set("rateI",rt.incomeRate);
+}
+function savePayRates(){
+  const g=id=>parseFloat(document.getElementById(id).value)||0;
+  dbSet("settings/payRates", {pension:g("rateP"),health:g("rateH"),care:g("rateC"),employment:g("rateE"),incomeRate:g("rateI")});
+  toast("✅ 요율 저장됨");
+}
+function payFromInputs(prefix){
+  const g=id=>parseInt(document.getElementById(prefix+id).value)||0;
+  return {base:g("PayBase"),meal:g("PayMeal"),car:g("PayCar"),annual:g("PayAnnual"),holiday:g("PayHoliday"),position:g("PayPosition"),bonus:g("PayBonus")};
 }
 function registerEmp(){
   const name=document.getElementById("rName").value.trim();
@@ -1043,16 +1133,18 @@ function registerEmp(){
   if(!/^\d{2,4}$/.test(pin)){ toast("비밀번호는 숫자 2~4자리로 해주세요"); return; }
   const hours=getHoursInputs("rHours");
   if(hours.reduce((a,b)=>a+b,0)===0){ toast("요일별 근무시간을 입력해주세요"); return; }
+  const pay=payFromInputs("r");
   const emp={
-    name, birth:document.getElementById("rBirth").value||"",
+    name, birth:document.getElementById("rBirth").value.trim()||"",
     joinDate:document.getElementById("rJoin").value||"",
     taskId:document.getElementById("rTask").value,
     hours, daysOff:hours.map((h,i)=>h===0?i:-1).filter(i=>i>=0),
     leaveUnit:document.getElementById("rUnit").value,
+    payHistory:[Object.assign({from:"0000-00"}, pay)],
     pin, retired:false
   };
   dbSet("employees/"+newId(), emp);
-  ["rName","rBirth","rJoin","rPin"].forEach(id=>document.getElementById(id).value="");
+  ["rName","rBirth","rJoin","rPin","rPayBase","rPayMeal","rPayCar","rPayAnnual","rPayHoliday","rPayPosition","rPayBonus"].forEach(id=>document.getElementById(id).value="");
   buildHoursInputs("rHours",null);
   toast("✅ "+name+"님 등록 완료");
 }
@@ -1065,6 +1157,15 @@ function openEmpEdit(id){
   fillTaskSelect("eTask", e.taskId);
   buildHoursInputs("eHours", empHours(e));
   document.getElementById("eUnit").value=e.leaveUnit||"day";
+  const p=currentPay(e); // 가장 최근 급여
+  document.getElementById("ePayBase").value=p.base||"";
+  document.getElementById("ePayMeal").value=p.meal||"";
+  document.getElementById("ePayCar").value=p.car||"";
+  document.getElementById("ePayAnnual").value=p.annual||"";
+  document.getElementById("ePayHoliday").value=p.holiday||"";
+  document.getElementById("ePayPosition").value=p.position||"";
+  document.getElementById("ePayBonus").value=p.bonus||"";
+  document.getElementById("ePayEffMonth").value="";
   document.getElementById("ePin").value=e.pin||"";
   openModal("mEdit");
 }
@@ -1073,14 +1174,29 @@ function saveEmpEdit(){
   if(!/^\d{2,4}$/.test(pin)){ toast("비밀번호는 숫자 2~4자리로 해주세요"); return; }
   const hours=getHoursInputs("eHours");
   if(hours.reduce((a,b)=>a+b,0)===0){ toast("요일별 근무시간을 입력해주세요"); return; }
-  const e=Object.assign({},DB.employees[editEmpId],{
+  const old=DB.employees[editEmpId];
+  const pay=payFromInputs("e");
+  const eff=document.getElementById("ePayEffMonth").value;
+  let hist=(old.payHistory||[]).slice();
+  if(hist.length===0) hist=[Object.assign({from:"0000-00"}, pay)];
+  else if(eff){
+    // 반영월 지정 → 그 달부터 새 급여 (같은 달 있으면 교체)
+    hist=hist.filter(h=>h.from!==eff);
+    hist.push(Object.assign({from:eff}, pay));
+    hist.sort((a,b)=>a.from.localeCompare(b.from));
+  }else{
+    // 반영월 없음 → 가장 최근 급여를 그대로 수정
+    hist.sort((a,b)=>a.from.localeCompare(b.from));
+    hist[hist.length-1]=Object.assign({from:hist[hist.length-1].from}, pay);
+  }
+  const e=Object.assign({},old,{
     name:document.getElementById("eName").value.trim(),
-    birth:document.getElementById("eBirth").value,
+    birth:document.getElementById("eBirth").value.trim(),
     joinDate:document.getElementById("eJoin").value,
     taskId:document.getElementById("eTask").value,
     hours, daysOff:hours.map((h,i)=>h===0?i:-1).filter(i=>i>=0),
     leaveUnit:document.getElementById("eUnit").value,
-    pin
+    payHistory:hist, pin
   });
   dbSet("employees/"+editEmpId, e);
   closeModal("mEdit"); toast("✅ 저장되었습니다");
@@ -1381,6 +1497,170 @@ function downloadAtt(){
     csv+=`${emp.name},${emp.joinDate||""},${c.weekly},${c.unit==="hour"?"시간":"일수"},${f(c.earned)},${f(c.usedL)},${f(c.usedA)},${f(c.earned-c.usedL-c.usedA)}\n`;
   });
   dlFile(csv, `근태기록_${e.name}_${ym}.csv`);
+}
+
+/* ================= 급여 관리 ================= */
+// 2026년 근로자 부담 요율 (관리자가 설정에서 수정 가능)
+function payRates(){
+  const r=(DB.settings&&DB.settings.payRates)||{};
+  return {
+    pension: r.pension!=null?r.pension:4.5,      // 국민연금
+    health: r.health!=null?r.health:3.545,       // 건강보험
+    care: r.care!=null?r.care:12.95,             // 장기요양(건강보험료의 %)
+    employment: r.employment!=null?r.employment:0.9, // 고용보험
+    incomeRate: r.incomeRate!=null?r.incomeRate:3.3  // 소득세 근사(과세급여의 %)
+  };
+}
+function emptyPay(){ return {base:0,meal:0,car:0,annual:0,holiday:0,position:0,bonus:0}; }
+// 해당 월에 적용되는 급여(payHistory에서 from<=ym 중 최신)
+function payForMonth(e, ym){
+  const hist=(e.payHistory||[]).slice().sort((a,b)=>a.from.localeCompare(b.from));
+  let cur=null;
+  hist.forEach(h=>{ if(h.from<=ym) cur=h; });
+  return cur||hist[0]||emptyPay();
+}
+function currentPay(e){
+  const hist=(e.payHistory||[]).slice().sort((a,b)=>a.from.localeCompare(b.from));
+  return hist[hist.length-1]||emptyPay();
+}
+// 성별 (생년월일 끝자리 홀=남/짝=여)
+function genderOf(e){
+  const m=(e.birth||"").match(/(\d)\s*$/);
+  if(!m) return "-";
+  return (parseInt(m[1])%2===1)?"남":"여";
+}
+function birthOnly(e){
+  return (e.birth||"").replace(/-\d\s*$/,"");
+}
+// 그 달 총 추가근무시간
+function monthOvertime(empId, ym){
+  let h=0;
+  Object.entries(DB.records||{}).forEach(([date,recs])=>{
+    if(!date.startsWith(ym)) return;
+    const r=recs[empId]; if(r&&r.overtime) h+=r.overtime;
+  });
+  return h;
+}
+// 통상시급 = (기본급+식비+차량유지비) / 209
+function ordinaryHourly(pay){
+  return (pay.base+pay.meal+pay.car)/209;
+}
+function calcPay(empId, ym){
+  const e=DB.employees[empId];
+  const pay=payForMonth(e, ym);
+  const otHours=monthOvertime(empId, ym);
+  const otPay=Math.round(ordinaryHourly(pay)*otHours*1.5);
+  const gross = pay.base+pay.meal+pay.car+otPay+pay.annual+pay.holiday+pay.position+pay.bonus;
+  // 공제 근사 (관리자 수정값 있으면 그것 사용)
+  const rt=payRates();
+  const ov=((DB.payroll||{})[ym]||{})[empId]||{};
+  const num=(auto,key)=> ov[key]!=null && ov[key]!=="" ? Math.round(ov[key]) : Math.round(auto);
+  // 4대보험 근사: 비과세(식비·차량유지비) 제외한 보수 기준으로 근사
+  const insBase = pay.base+pay.position+pay.holiday+pay.annual+pay.bonus+otPay;
+  const pension = num(insBase*rt.pension/100, "pension");
+  const health  = num(insBase*rt.health/100, "health");
+  const care    = num(health*rt.care/100, "care");
+  const employment = num(insBase*rt.employment/100, "employment");
+  const incometax = num((gross-pay.meal-pay.car)*rt.incomeRate/100, "incometax");
+  const localtax  = num(incometax*0.1, "localtax");
+  const deduct = pension+health+care+employment+incometax+localtax;
+  const net = gross-deduct;
+  return {e,pay,otHours,otPay,gross,pension,health,care,employment,incometax,localtax,deduct,net};
+}
+function won(n){ return (n||0).toLocaleString(); }
+let payMonthCache=null;
+function renderPay(){
+  const mi=document.getElementById("payMonth");
+  if(!mi.value) mi.value=today().slice(0,7);
+  const ym=mi.value; payMonthCache=ym;
+  const emps=activeEmps().sort((a,b)=>a[1].name.localeCompare(b[1].name,"ko"));
+  if(emps.length===0){ document.getElementById("payTable").innerHTML='<div class="sub" style="padding:14px 0;text-align:center">등록된 직원이 없습니다.</div>'; return; }
+  let h=`<table class="pay"><tr>
+    <th class="name">이름</th><th>성별</th><th>생년월일</th>
+    <th>기본급</th><th>식비</th><th>차량<br>유지비</th><th>초과근무<br>수당</th><th>연가<br>수당</th><th>휴일근로<br>수당</th><th>직책<br>수당</th><th>성과급</th>
+    <th>급여합계</th>
+    <th>국민<br>연금</th><th>건강<br>보험</th><th>장기<br>요양</th><th>고용<br>보험</th><th>소득세</th><th>지방세</th>
+    <th>공제후<br>총액</th></tr>`;
+  emps.forEach(([id,e])=>{
+    const c=calcPay(id, ym);
+    const ed=(field,val)=>`<td class="editable" onclick="editDeduct('${id}','${field}')">${won(val)}</td>`;
+    h+=`<tr>
+      <td class="name">${e.name}</td><td>${genderOf(e)}</td><td>${birthOnly(e)||"-"}</td>
+      <td>${won(c.pay.base)}</td><td>${won(c.pay.meal)}</td><td>${won(c.pay.car)}</td>
+      <td>${won(c.otPay)}<br><span class="sub" style="font-size:9px">${c.otHours}h</span></td>
+      <td>${won(c.pay.annual)}</td><td>${won(c.pay.holiday)}</td><td>${won(c.pay.position)}</td><td>${won(c.pay.bonus)}</td>
+      <td class="sum">${won(c.gross)}</td>
+      ${ed("pension",c.pension)}${ed("health",c.health)}${ed("care",c.care)}${ed("employment",c.employment)}${ed("incometax",c.incometax)}${ed("localtax",c.localtax)}
+      <td class="total">${won(c.net)}</td></tr>`;
+  });
+  h+="</table>";
+  document.getElementById("payTable").innerHTML=h;
+}
+function editDeduct(empId, field){
+  const ym=payMonthCache;
+  const cur=(((DB.payroll||{})[ym]||{})[empId]||{})[field];
+  const label={pension:"국민연금",health:"건강보험",care:"장기요양",employment:"고용보험",incometax:"소득세",localtax:"지방세"}[field];
+  const v=prompt(label+" 금액 수정 (숫자)\n비우면 자동계산값으로 되돌아갑니다", cur!=null?cur:"");
+  if(v===null) return;
+  const t=v.trim();
+  if(t===""){ dbSet(`payroll/${ym}/${empId}/${field}`, null); }
+  else{ dbSet(`payroll/${ym}/${empId}/${field}`, parseInt(t)||0); }
+  setTimeout(renderPay,300);
+}
+/* --- 공제 엑셀 양식 다운로드 --- */
+function downloadPayTemplate(){
+  const ym=payMonthCache||today().slice(0,7);
+  const emps=activeEmps().sort((a,b)=>a[1].name.localeCompare(b[1].name,"ko"));
+  let csv="\uFEFF직원ID,이름,국민연금,건강보험,장기요양,고용보험,소득세,지방세\n";
+  emps.forEach(([id,e])=>{
+    const c=calcPay(id,ym);
+    csv+=`${id},${e.name},${c.pension},${c.health},${c.care},${c.employment},${c.incometax},${c.localtax}\n`;
+  });
+  dlFile(csv, `공제양식_${ym}.csv`);
+  toast("양식을 받아 수정 후 업로드하세요");
+}
+/* --- 공제 엑셀 업로드 (채워진 칸만 반영) --- */
+function uploadPayDeductions(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const ym=payMonthCache||today().slice(0,7);
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let text=e.target.result.replace(/^\uFEFF/,"");
+      const lines=text.split(/\r?\n/).filter(l=>l.trim());
+      const header=lines[0].split(",").map(s=>s.trim());
+      const cols=["국민연금","건강보험","장기요양","고용보험","소득세","지방세"];
+      const keys=["pension","health","care","employment","incometax","localtax"];
+      const idx={}; cols.forEach((c,i)=>{ idx[keys[i]]=header.indexOf(c); });
+      const idCol=header.indexOf("직원ID");
+      let cnt=0;
+      for(let i=1;i<lines.length;i++){
+        const cells=lines[i].split(",");
+        const empId=(cells[idCol]||"").trim();
+        if(!empId||!DB.employees[empId]) continue;
+        keys.forEach(k=>{
+          const ci=idx[k]; if(ci<0) return;
+          const val=(cells[ci]||"").trim();
+          if(val!==""){ dbSet(`payroll/${ym}/${empId}/${k}`, parseInt(val.replace(/,/g,""))||0); cnt++; }
+        });
+      }
+      toast(`✅ ${cnt}개 항목 반영됨`);
+      setTimeout(renderPay,400);
+    }catch(err){ toast("파일을 읽을 수 없어요. 양식을 확인해주세요"); }
+    ev.target.value="";
+  };
+  reader.readAsText(file,"utf-8");
+}
+/* --- 급여대장 다운로드 --- */
+function downloadPay(){
+  const ym=payMonthCache||today().slice(0,7);
+  const emps=activeEmps().sort((a,b)=>a[1].name.localeCompare(b[1].name,"ko"));
+  let csv=`\uFEFF${ym} 급여대장\n이름,성별,생년월일,기본급,식비,차량유지비,초과근무수당,초과근무시간,연가수당,휴일근로수당,직책수당,성과급,급여합계,국민연금,건강보험,장기요양,고용보험,소득세,지방세,공제계,공제후총액\n`;
+  emps.forEach(([id,e])=>{
+    const c=calcPay(id,ym);
+    csv+=[e.name,genderOf(e),birthOnly(e),c.pay.base,c.pay.meal,c.pay.car,c.otPay,c.otHours,c.pay.annual,c.pay.holiday,c.pay.position,c.pay.bonus,c.gross,c.pension,c.health,c.care,c.employment,c.incometax,c.localtax,c.deduct,c.net].join(",")+"\n";
+  });
+  dlFile(csv, `급여대장_${ym}.csv`);
 }
 
 /* ---------------- 시계 ---------------- */
