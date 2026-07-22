@@ -42,6 +42,14 @@ label{font-size:14px;color:var(--sub);display:block;margin:12px 0 6px;font-weigh
 .big-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .big-grid button{padding:28px 8px;border:2px solid var(--line);border-radius:18px;background:#fff;font-size:23px;font-weight:800;cursor:pointer;color:var(--ink);word-break:keep-all}
 .big-grid button:active{background:var(--brand-soft);border-color:var(--brand)}
+/* 메인 이름 선택 화면 (업무 구분 없음) */
+#s-cat{max-width:1100px}
+.name-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(min-width:640px){ .name-grid{grid-template-columns:repeat(4,1fr)} }
+.name-grid button{padding:34px 8px;border:2px solid var(--line);border-radius:20px;background:#fff;cursor:pointer;color:var(--ink);word-break:keep-all;display:flex;flex-direction:column;align-items:center;gap:10px}
+.name-grid button:active{background:var(--brand-soft);border-color:var(--brand)}
+.name-grid .navatar{width:64px;height:64px;border-radius:50%;background:var(--brand-soft);color:var(--brand);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800}
+.name-grid .nname{font-size:24px;font-weight:800}
 .pin-dots{display:flex;gap:16px;justify-content:center;margin:22px 0}
 .pin-dots i{width:18px;height:18px;border-radius:50%;background:var(--line)}
 .pin-dots i.f{background:var(--brand)}
@@ -124,36 +132,31 @@ table.tt th{background:#F1EDE7;font-weight:800}
 
 <div id="toast" class="toast"></div>
 
-<!-- ===== 직원: 업무 선택 ===== -->
+<!-- ===== 직원: 이름 선택 (메인) ===== -->
 <div class="screen show" id="s-cat">
   <div id="fbWarn" class="banner">⚠ 서버 연결 설정이 필요합니다. 파일 상단의 FIREBASE_CONFIG를 입력해주세요. (현재는 이 기기에만 저장됩니다)</div>
-  <div style="text-align:center;margin:20px 0 24px">
+  <div style="text-align:center;margin:18px 0 20px">
     <div class="h1">어서오세요 👋</div>
-    <div class="sub" style="margin-top:6px">오늘 하시는 <b>업무</b>를 눌러주세요</div>
-  </div>
-  <div class="big-grid" id="catGrid"></div>
-  <div style="height:20px"></div>
-  <button class="btn btn-home" onclick="adminLoginAsk()">🔒 관리자</button>
-</div>
-
-<!-- ===== 직원: 이름 선택 ===== -->
-<div class="screen" id="s-name">
-  <div style="text-align:center;margin:14px 0 22px">
-    <div class="h1" id="nameTitle"></div>
     <div class="sub" style="margin-top:6px">본인 <b>이름</b>을 눌러주세요</div>
   </div>
-  <div class="big-grid" id="nameGrid"></div>
+  <div class="name-grid" id="catGrid"></div>
   <div style="height:20px"></div>
-  <button class="btn btn-home" onclick="go('cat')">← 처음으로</button>
+  <button class="btn btn-home" onclick="adminLoginAsk()">🔒 관리자</button>
+  <div style="height:20px"></div>
+</div>
+
+<!-- (미사용) 업무별 이름 화면 자리 -->
+<div class="screen" id="s-name" style="display:none">
+  <div id="nameTitle"></div><div id="nameGrid"></div>
 </div>
 
 <!-- ===== 직원: PIN ===== -->
 <div class="screen" id="s-pin">
   <div style="text-align:center;margin:14px 0">
     <div class="h1" id="pinTitle"></div>
-    <div class="sub" style="margin-top:6px">비밀번호 <b>4자리</b>를 눌러주세요</div>
+    <div class="sub" style="margin-top:6px" id="pinSub">비밀번호를 눌러주세요</div>
   </div>
-  <div class="pin-dots" id="pinDots"><i></i><i></i><i></i><i></i></div>
+  <div class="pin-dots" id="pinDots"></div>
   <div class="pin-pad">
     <button onclick="pinKey(1)">1</button><button onclick="pinKey(2)">2</button><button onclick="pinKey(3)">3</button>
     <button onclick="pinKey(4)">4</button><button onclick="pinKey(5)">5</button><button onclick="pinKey(6)">6</button>
@@ -162,6 +165,8 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <button onclick="pinKey(0)">0</button>
     <button style="color:var(--sub);font-size:20px" onclick="pinBack()">⌫</button>
   </div>
+  <div style="height:14px"></div>
+  <button class="btn btn-primary" style="max-width:320px;margin:0 auto" onclick="pinSubmit()">확인</button>
 </div>
 
 <!-- ===== 직원 홈 ===== -->
@@ -181,6 +186,15 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <div class="punch-sub">
       <button class="pb-early" onclick="punch('early')">조퇴</button>
       <button class="pb-away" onclick="punch('away')">외출</button>
+    </div>
+    <div style="margin-top:12px;padding:12px;background:#F1EDE7;border-radius:12px">
+      <div class="sub" style="font-weight:700;margin-bottom:8px">추가근무 (30분 단위)</div>
+      <div class="row" style="justify-content:center;gap:14px">
+        <button class="mini-btn" style="font-size:22px;padding:8px 18px" onclick="otStep(-0.5)">−</button>
+        <b style="font-size:24px;min-width:90px;text-align:center" id="otDisplay">0시간</b>
+        <button class="mini-btn" style="font-size:22px;padding:8px 18px" onclick="otStep(0.5)">＋</button>
+      </div>
+      <button class="btn" style="background:var(--ink);color:#fff;font-size:16px;padding:12px;margin-top:10px" onclick="saveOvertime()">추가근무 저장</button>
     </div>
     <div class="sub" style="margin-top:14px" id="todayLog">오늘 기록 없음</div>
   </div>
@@ -214,13 +228,19 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <div class="prod-input-row"><b>경주빵</b><input type="number" id="prodGyeongju" placeholder="개수" inputmode="numeric"></div>
     <div class="prod-input-row"><b>찰보리빵</b><input type="number" id="prodBori" placeholder="개수" inputmode="numeric"></div>
     <button class="btn" style="background:var(--amber);color:#fff;font-size:18px;padding:14px;margin-top:6px" onclick="saveProduction()">생산량 저장</button>
+    <div id="prodSaved" style="margin-top:10px"></div>
   </div>
 
   <div class="card task-box" style="background:var(--blue-soft)">
-    <div class="sub" style="color:var(--blue);font-weight:700;margin-bottom:10px">오늘 재고수량 입력</div>
+    <div class="sub" style="color:var(--blue);font-weight:700;margin-bottom:10px">재고수량 입력</div>
     <div class="prod-input-row"><b>경주빵</b><input type="number" id="stockGyeongju" placeholder="개수" inputmode="numeric"></div>
     <div class="prod-input-row"><b>찰보리빵</b><input type="number" id="stockBori" placeholder="개수" inputmode="numeric"></div>
-    <button class="btn" style="background:var(--blue);color:#fff;font-size:18px;padding:14px;margin-top:6px" onclick="saveStock()">재고수량 저장</button>
+    <label style="display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--ink);font-size:15px;cursor:pointer">
+      <input type="checkbox" id="stockPrev" onchange="toggleStockDate()" style="width:20px;height:20px"> 전날(다른 날짜)로 저장
+    </label>
+    <input type="date" id="stockDate" style="display:none;margin-top:8px">
+    <button class="btn" style="background:var(--blue);color:#fff;font-size:18px;padding:14px;margin-top:10px" onclick="saveStock()">재고수량 저장</button>
+    <div id="stockSaved" style="margin-top:10px"></div>
   </div>
 
   <button class="btn btn-home" onclick="logoutEmp()">🏠 처음으로 (다음 분 기록)</button>
@@ -266,7 +286,7 @@ table.tt th{background:#F1EDE7;font-weight:800}
       <option value="day">일수로 계산 (연차 1일 · 반차 0.5일 · 반반차 0.25일)</option>
       <option value="hour">시간으로 계산 (그 요일 근무시간만큼 차감)</option>
     </select>
-    <label>비밀번호 (4자리)</label><input id="rPin" maxlength="4" placeholder="0000" inputmode="numeric">
+    <label>비밀번호 (2~4자리 숫자)</label><input id="rPin" maxlength="4" placeholder="예: 12 또는 1234" inputmode="numeric">
     <div style="height:14px"></div>
     <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="registerEmp()">등록하기</button>
   </div>
@@ -362,7 +382,7 @@ table.tt th{background:#F1EDE7;font-weight:800}
       <option value="day">일수로 계산 (연차 1일 · 반차 0.5일 · 반반차 0.25일)</option>
       <option value="hour">시간으로 계산 (그 요일 근무시간만큼 차감)</option>
     </select>
-    <label>비밀번호 (4자리)</label><input id="ePin" maxlength="4" inputmode="numeric">
+    <label>비밀번호 (2~4자리 숫자)</label><input id="ePin" maxlength="4" inputmode="numeric">
     <div style="height:16px"></div>
     <button class="btn btn-primary" style="font-size:17px;padding:14px" onclick="saveEmpEdit()">저장</button>
     <div style="height:8px"></div>
@@ -421,7 +441,7 @@ table.tt th{background:#F1EDE7;font-weight:800}
 <div class="modal-bg" id="mConfirm">
   <div class="modal">
     <div class="h2" id="mConfirmTitle">지난달 출근부 확인</div>
-    <div class="sub" style="margin:6px 0 12px">기록을 확인하시고 아래에 서명해주세요.<br>틀린 부분이 있으면 <b>관리자에게 말씀해주세요.</b></div>
+    <div class="sub" style="margin:6px 0 12px">기록을 확인하시고 아래에 서명해주세요.<br><b>추가근무</b> 칸은 눌러서 고칠 수 있어요. 출퇴근 시간이 틀렸으면 <b>관리자에게 말씀해주세요.</b></div>
     <div id="mConfirmTable" style="max-height:40vh;overflow-y:auto"></div>
     <div class="sub" style="margin:12px 0 6px;font-weight:700">✍ 여기에 손가락으로 서명해주세요</div>
     <canvas class="sign-canvas" id="signCanvas"></canvas>
@@ -555,38 +575,38 @@ let selTask=null, selEmp=null, pinBuf="";
 
 function renderCats(){
   const g=document.getElementById("catGrid"); g.innerHTML="";
-  activeTasks().forEach(([id,t])=>{
+  const list=activeEmps().sort((a,b)=>a[1].name.localeCompare(b[1].name,"ko"));
+  if(list.length===0){ g.innerHTML='<div class="sub" style="grid-column:1/-1;text-align:center;padding:40px 0">등록된 직원이 없습니다.<br>관리자로 로그인해 직원을 등록해주세요.</div>'; return; }
+  list.forEach(([id,e])=>{
     const b=document.createElement("button");
-    b.innerHTML=(TASK_ICONS[t.name]?TASK_ICONS[t.name]+"<br>":"")+t.name;
-    b.onclick=()=>{ selTask=id; go("name"); };
+    b.innerHTML=`<span class="navatar">${e.name[0]}</span><span class="nname">${e.name}</span>`;
+    b.onclick=()=>{ selEmp=id; pinBuf=""; startPin(e); };
     g.appendChild(b);
   });
 }
-function renderNames(){
-  document.getElementById("nameTitle").textContent=(TASK_ICONS[taskName(selTask)]||"")+" "+taskName(selTask);
-  const g=document.getElementById("nameGrid"); g.innerHTML="";
-  const list=activeEmps().filter(([,e])=>e.taskId===selTask);
-  if(list.length===0){ g.innerHTML='<div class="sub" style="grid-column:1/-1;text-align:center;padding:30px 0">이 업무에 등록된 직원이 없습니다.<br>관리자에게 문의해주세요.</div>'; }
-  list.forEach(([id,e])=>{
-    const b=document.createElement("button"); b.textContent=e.name;
-    b.onclick=()=>{ selEmp=id; pinBuf=""; renderPinDots();
-      document.getElementById("pinTitle").textContent=e.name+"님"; go("pin"); };
-    g.appendChild(b);
-  });
+function renderNames(){}
+function startPin(e){
+  const len=(e.pin||"").length||4;
+  document.getElementById("pinTitle").textContent=e.name+"님";
+  document.getElementById("pinSub").textContent=`비밀번호 ${len}자리를 눌러주세요`;
+  const dots=document.getElementById("pinDots");
+  dots.innerHTML=""; for(let i=0;i<len;i++) dots.appendChild(document.createElement("i"));
+  renderPinDots();
+  go("pin");
 }
 function renderPinDots(){
   document.querySelectorAll("#pinDots i").forEach((d,i)=>d.classList.toggle("f",i<pinBuf.length));
 }
+function pinLen(){ const e=DB.employees[selEmp]; return (e&&e.pin?e.pin.length:4); }
 function pinKey(n){
-  if(pinBuf.length>=4) return;
+  if(pinBuf.length>=pinLen()) return;
   pinBuf+=n; renderPinDots();
-  if(pinBuf.length===4){
-    setTimeout(()=>{
-      const e=DB.employees[selEmp];
-      if(e && pinBuf===e.pin){ enterEmpHome(); }
-      else{ toast("비밀번호가 틀렸어요"); pinBuf=""; renderPinDots(); }
-    },150);
-  }
+  if(pinBuf.length===pinLen()) setTimeout(pinSubmit,150);
+}
+function pinSubmit(){
+  const e=DB.employees[selEmp];
+  if(e && pinBuf===e.pin){ enterEmpHome(); }
+  else{ toast("비밀번호가 틀렸어요"); pinBuf=""; renderPinDots(); }
 }
 function pinBack(){ pinBuf=pinBuf.slice(0,-1); renderPinDots(); }
 function logoutEmp(){ selEmp=null; go("cat"); }
@@ -612,9 +632,45 @@ function renderEmpHome(){
   if(r.out) log.push("퇴근 "+r.out);
   if(r.early) log.push("조퇴 "+r.early);
   (r.outings||[]).forEach(o=>log.push("외출 "+o.start+(o.end?"~"+o.end:"~")));
+  if(r.overtime) log.push("추가근무 "+r.overtime+"시간");
   document.getElementById("todayLog").textContent = log.length? "오늘 기록 : "+log.join(" · ") : "오늘 기록 없음";
   document.getElementById("empHomeStatus").textContent = r.in&&!r.out&&!r.early ? "근무중" : (r.out||r.early ? "퇴근" : "출근 전");
+  otVal = r.overtime || 0;
+  document.getElementById("otDisplay").textContent = otVal+"시간";
   renderWeekCal();
+  renderSavedQty();
+}
+let otVal=0;
+function otStep(delta){
+  otVal=Math.max(0, Math.round((otVal+delta)*2)/2);
+  document.getElementById("otDisplay").textContent=otVal+"시간";
+}
+function saveOvertime(){
+  if(!selEmp) return;
+  dbSet(`records/${today()}/${selEmp}/overtime`, otVal||null);
+  toast(otVal>0? `✅ 추가근무 ${otVal}시간 저장됨` : "추가근무 기록을 지웠어요");
+}
+function renderSavedQty(){
+  // 오늘 생산량 (본인+전체 합계)
+  const pd=(DB.production||{})[today()]||{};
+  const pEntries=Object.values(pd.entries||{});
+  let pg=0,pb=0; pEntries.forEach(e=>{pg+=e.gyeongju||0;pb+=e.bori||0;});
+  document.getElementById("prodSaved").innerHTML = pEntries.length
+    ? `<div style="background:#fff;border-radius:10px;padding:10px;font-size:14px">오늘 저장된 생산량 · 경주빵 <b>${pg}</b> · 찰보리빵 <b>${pb}</b><br><span class="sub" style="font-size:12px">${pEntries.map(e=>e.name+"("+((e.gyeongju||0)+(e.bori||0))+")").join(", ")}</span></div>`
+    : "";
+  // 재고 (입력한 날짜 기준 — 오늘 것 표시)
+  const sd=(DB.stock||{})[today()]||{};
+  const sEntries=Object.values(sd.entries||{});
+  let sg=0,sb=0; sEntries.forEach(e=>{sg+=e.gyeongju||0;sb+=e.bori||0;});
+  document.getElementById("stockSaved").innerHTML = sEntries.length
+    ? `<div style="background:#fff;border-radius:10px;padding:10px;font-size:14px">오늘 저장된 재고 · 경주빵 <b>${sg}</b> · 찰보리빵 <b>${sb}</b></div>`
+    : "";
+}
+function toggleStockDate(){
+  const on=document.getElementById("stockPrev").checked;
+  const di=document.getElementById("stockDate");
+  di.style.display=on?"block":"none";
+  if(on && !di.value){ const y=new Date(); y.setDate(y.getDate()-1); di.value=ds(y); }
 }
 function punch(kind){
   if(!selEmp) return;
@@ -753,16 +809,24 @@ function saveProduction(){
   document.getElementById("prodGyeongju").value="";
   document.getElementById("prodBori").value="";
   toast("✅ 생산량 저장됨");
+  setTimeout(renderSavedQty,300);
 }
 function saveStock(){
   const g=parseInt(document.getElementById("stockGyeongju").value)||0;
   const b=parseInt(document.getElementById("stockBori").value)||0;
   if(g===0&&b===0){ toast("수량을 입력해주세요"); return; }
+  let date=today();
+  if(document.getElementById("stockPrev").checked){
+    date=document.getElementById("stockDate").value;
+    if(!date){ toast("날짜를 선택해주세요"); return; }
+  }
   const entry={empId:selEmp, name:DB.employees[selEmp].name, gyeongju:g, bori:b, time:hm()};
-  dbSet(`stock/${today()}/entries/${newId()}`, entry);
+  dbSet(`stock/${date}/entries/${newId()}`, entry);
   document.getElementById("stockGyeongju").value="";
   document.getElementById("stockBori").value="";
-  toast("✅ 재고수량 저장됨");
+  const [Y,M,D]=date.split("-");
+  toast(`✅ ${M}/${D} 재고수량 저장됨`);
+  setTimeout(renderSavedQty,300);
 }
 
 /* ---------------- 전월 출근부 확인/서명 ---------------- */
@@ -785,7 +849,7 @@ function checkPrevMonthConfirm(){
 function openConfirmModal(){
   const [y,m]=confirmMonth.split("-").map(Number);
   document.getElementById("mConfirmTitle").textContent=`${y}년 ${m}월 출근부 확인`;
-  document.getElementById("mConfirmTable").innerHTML=buildAttTable(selEmp,confirmMonth,false);
+  document.getElementById("mConfirmTable").innerHTML=buildAttTable(selEmp,confirmMonth,"ot");
   openModal("mConfirm");
   setTimeout(initSignCanvas,100);
 }
@@ -976,7 +1040,7 @@ function registerEmp(){
   const name=document.getElementById("rName").value.trim();
   const pin=document.getElementById("rPin").value.trim();
   if(!name){ toast("이름을 입력해주세요"); return; }
-  if(!/^\d{4}$/.test(pin)){ toast("비밀번호는 숫자 4자리로 해주세요"); return; }
+  if(!/^\d{2,4}$/.test(pin)){ toast("비밀번호는 숫자 2~4자리로 해주세요"); return; }
   const hours=getHoursInputs("rHours");
   if(hours.reduce((a,b)=>a+b,0)===0){ toast("요일별 근무시간을 입력해주세요"); return; }
   const emp={
@@ -1006,7 +1070,7 @@ function openEmpEdit(id){
 }
 function saveEmpEdit(){
   const pin=document.getElementById("ePin").value.trim();
-  if(!/^\d{4}$/.test(pin)){ toast("비밀번호는 숫자 4자리로 해주세요"); return; }
+  if(!/^\d{2,4}$/.test(pin)){ toast("비밀번호는 숫자 2~4자리로 해주세요"); return; }
   const hours=getHoursInputs("eHours");
   if(hours.reduce((a,b)=>a+b,0)===0){ toast("요일별 근무시간을 입력해주세요"); return; }
   const e=Object.assign({},DB.employees[editEmpId],{
@@ -1182,7 +1246,7 @@ function buildAttTable(empId, ym, editable){
   const [y,m]=ym.split("-").map(Number);
   const last=new Date(y,m,0).getDate();
   const todayStr=today();
-  let html=`<table class="tt"><tr><th>날짜</th><th>출근</th><th>퇴근</th><th>휴무사유</th><th>비고</th></tr>`;
+  let html=`<table class="tt"><tr><th>날짜</th><th>출근</th><th>퇴근</th><th>휴무사유</th><th>추가<br>근무</th><th>비고</th></tr>`;
   const chipMap={"연차":"b","반차":"a","반반차":"a","대체휴무":"p","병가":"r"};
   const unit=e.leaveUnit||"day";
   for(let d=1;d<=last;d++){
@@ -1191,8 +1255,10 @@ function buildAttTable(empId, ym, editable){
     const r=rec(dstr,empId)||{};
     const isOff=(e.daysOff||[]).includes(dt.getDay());
     const past = dstr<=todayStr;
-    let reason="-", note=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:"~")).join(", ");
-    if(r.early) note=(note?note+", ":"")+"조퇴 "+r.early;
+    let noteArr=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:"~"));
+    if(r.early) noteArr.push("조퇴 "+r.early);
+    if(isOff && r.in) noteArr.unshift("대체근무");  // 휴무일에 출근 → 대체근무
+    let reason="-";
     if(r.leave){
       let amt="";
       if(LEAVE_FACTOR[r.leave]!=null){
@@ -1204,11 +1270,25 @@ function buildAttTable(empId, ym, editable){
     }
     else if(isOff && !r.in) reason='<span style="color:var(--sub)">정기휴무</span>';
     else if(past && !r.in) reason='<span class="chip a">기타(미입력)</span>';
-    const inCell = editable ? `<td class="editable" onclick="editCell('${dstr}','in','${empId}')">${r.in||"－"}</td>` : `<td>${r.in||"-"}</td>`;
-    const outCell = editable ? `<td class="editable" onclick="editCell('${dstr}','out','${empId}')">${r.out||"－"}</td>` : `<td>${r.out||"-"}</td>`;
-    html+=`<tr><td>${m}/${d}(${DOW[dt.getDay()]})</td>${inCell}${outCell}<td>${reason}</td><td style="font-size:11px">${note}</td></tr>`;
+    const canTime = editable===true;   // 관리자만 출퇴근 수정
+    const canOt = editable===true || editable==="ot"; // 관리자+직원 확인 시 추가근무 수정
+    const inCell = canTime ? `<td class="editable" onclick="editCell('${dstr}','in','${empId}')">${r.in||"－"}</td>` : `<td>${r.in||"-"}</td>`;
+    const outCell = canTime ? `<td class="editable" onclick="editCell('${dstr}','out','${empId}')">${r.out||"－"}</td>` : `<td>${r.out||"-"}</td>`;
+    const otTxt = r.overtime? r.overtime+"h" : "－";
+    const otCell = canOt ? `<td class="editable" onclick="editOt('${dstr}','${empId}')">${otTxt}</td>` : `<td>${r.overtime?r.overtime+"h":"-"}</td>`;
+    html+=`<tr><td>${m}/${d}(${DOW[dt.getDay()]})</td>${inCell}${outCell}<td>${reason}</td>${otCell}<td style="font-size:11px">${noteArr.join(", ")}</td></tr>`;
   }
   return html+"</table>";
+}
+function editOt(date,empId){
+  const cur=(rec(date,empId)||{}).overtime||0;
+  const v=prompt("추가근무 시간 (0.5 단위, 예: 1.5)\n지우려면 0 또는 빈칸", cur);
+  if(v===null) return;
+  const n=Math.max(0, Math.round((parseFloat(v)||0)*2)/2);
+  dbSet(`records/${date}/${empId}/overtime`, n||null);
+  if(document.getElementById("mConfirm").classList.contains("show")){
+    setTimeout(()=>{ document.getElementById("mConfirmTable").innerHTML=buildAttTable(selEmp,confirmMonth,"ot"); },300);
+  } else setTimeout(renderAtt,300);
 }
 function fmtD(x){ x=r2(x); return (x%1===0?x.toFixed(0):x.toFixed(2).replace(/0$/,""))+"일"; }
 function fmtH(x){ x=r1(x); return (x%1===0?x.toFixed(0):x.toFixed(1))+"시간"; }
@@ -1281,7 +1361,7 @@ function downloadAtt(){
   const e=DB.employees[empId];
   const [y,m]=ym.split("-").map(Number);
   const last=new Date(y,m,0).getDate();
-  let csv=`\uFEFF${e.name} ${y}년 ${m}월 출근표\n날짜,출근,퇴근,휴무사유,비고\n`;
+  let csv=`\uFEFF${e.name} ${y}년 ${m}월 출근표\n날짜,출근,퇴근,휴무사유,추가근무,비고\n`;
   for(let d=1;d<=last;d++){
     const dt=new Date(y,m-1,d), dstr=ds(dt), r=rec(dstr,empId)||{};
     const isOff=(e.daysOff||[]).includes(dt.getDay());
@@ -1289,9 +1369,10 @@ function downloadAtt(){
     if(r.leave) reason=r.leave;
     else if(isOff&&!r.in) reason="정기휴무";
     else if(dstr<=today()&&!r.in) reason="기타(미입력)";
-    let note=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:"")).join(" / ");
-    if(r.early) note+=(note?" / ":"")+"조퇴 "+r.early;
-    csv+=`${m}/${d}(${DOW[dt.getDay()]}),${r.in||""},${r.out||""},${reason},${note}\n`;
+    let noteArr=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:""));
+    if(r.early) noteArr.push("조퇴 "+r.early);
+    if(isOff && r.in) noteArr.unshift("대체근무");
+    csv+=`${m}/${d}(${DOW[dt.getDay()]}),${r.in||""},${r.out||""},${reason},${r.overtime?r.overtime+"시간":""},${noteArr.join(" / ")}\n`;
   }
   csv+=`\n연차 정리 (올해 기준)\n이름,입사일,주간 근무시간,계산 방식,발생,사용(연차),사용(대체),잔여\n`;
   activeEmps().forEach(([id,emp])=>{
