@@ -305,7 +305,8 @@ table.tt th{background:#F1EDE7;font-weight:800}
   <div class="section-t">➕ 직원 등록</div>
   <div class="card">
     <label>이름</label><input id="rName" placeholder="홍길동">
-    <label>소속 지점</label><select id="rBranch"></select>
+    <label>근무 지점 (여러 곳 선택 가능)</label>
+    <div class="dow-check" id="rBranch"></div>
     <label>생년월일 (성별코드 포함 · 예: 1997-12-03-2)</label>
     <input id="rBirth" placeholder="1997-12-03-2  (끝자리 홀수=남, 짝수=여)">
     <label>입사일</label><input id="rJoin" type="date">
@@ -477,7 +478,8 @@ table.tt th{background:#F1EDE7;font-weight:800}
   <div class="modal">
     <div class="h2" style="margin-bottom:6px">직원 정보 수정</div>
     <label>이름</label><input id="eName">
-    <label>소속 지점</label><select id="eBranch"></select>
+    <label>근무 지점 (여러 곳 선택 가능)</label>
+    <div class="dow-check" id="eBranch"></div>
     <label>생년월일 (성별코드 포함 · 예: 1997-12-03-2)</label>
     <input id="eBirth" placeholder="1997-12-03-2">
     <label>입사일</label><input id="eJoin" type="date">
@@ -663,12 +665,23 @@ function seedIfEmpty(){
     if(usingFirebase) fdb.ref(ROOT+"/branches").set(b);
     else localStorage.setItem(LOCAL_KEY, JSON.stringify(DB));
   }
-  // 기존 직원에 지점 없으면 본점으로
+  // 기존 직원 지점 정보 정리 (branchId → branchIds 배열)
   const hqId=hqBranchId();
   Object.entries(DB.employees||{}).forEach(([id,e])=>{
-    if(!e.branchId){ e.branchId=hqId; if(usingFirebase) fdb.ref(ROOT+"/employees/"+id+"/branchId").set(hqId); }
+    if(!Array.isArray(e.branchIds) || e.branchIds.length===0){
+      const arr = e.branchId ? [e.branchId] : [hqId];
+      e.branchIds=arr;
+      if(usingFirebase) fdb.ref(ROOT+"/employees/"+id+"/branchIds").set(arr);
+    }
   });
 }
+/* 직원이 근무하는 지점 목록 / 소속 여부 */
+function empBranches(e){
+  if(Array.isArray(e.branchIds)&&e.branchIds.length) return e.branchIds;
+  return e.branchId? [e.branchId] : [];
+}
+function empInBranch(e, bid){ return empBranches(e).includes(bid); }
+function empBranchNames(e){ return empBranches(e).map(branchName).join(", ")||"-"; }
 
 /* ---------------- 지점 ---------------- */
 const BRANCH_KEY="hr_v1_branch";
@@ -701,13 +714,13 @@ function activeEmps(){
 }
 // 특정 지점 소속 재직 직원
 function branchEmps(branchId){
-  return activeEmps().filter(([,e])=>e.branchId===branchId);
+  return activeEmps().filter(([,e])=>empInBranch(e,branchId));
 }
 // 관리자 화면에서 현재 보고 있는 범위의 직원 (본점=전체, 지점=해당지점, 필터 적용)
 function scopedEmps(){
   let list=activeEmps();
-  if(adminScope && !isHQ(adminScope)) list=list.filter(([,e])=>e.branchId===adminScope);
-  if(admBranchFilter) list=list.filter(([,e])=>e.branchId===admBranchFilter);
+  if(adminScope && !isHQ(adminScope)) list=list.filter(([,e])=>empInBranch(e,adminScope));
+  if(admBranchFilter) list=list.filter(([,e])=>empInBranch(e,admBranchFilter));
   return list;
 }
 function taskName(id){ return (DB.tasks&&DB.tasks[id]&&DB.tasks[id].name)||"-"; }
@@ -844,7 +857,7 @@ function saveOvertime(){
   toast(otVal>0? `✅ 추가근무 ${otVal}시간 저장됨` : "추가근무 기록을 지웠어요");
 }
 function renderSavedQty(){
-  const bId=DB.employees[selEmp].branchId||currentBranch;
+  const bId=currentBranch||empBranches(DB.employees[selEmp])[0];  // 오늘 근무 중인 지점 기준
   // 오늘 생산량 (지점 기준)
   const pd=((DB.production||{})[bId]||{})[today()]||{};
   const pEntries=Object.values(pd.entries||{});
@@ -998,7 +1011,7 @@ function saveProduction(){
   const g=parseInt(document.getElementById("prodGyeongju").value)||0;
   const b=parseInt(document.getElementById("prodBori").value)||0;
   if(g===0&&b===0){ toast("수량을 입력해주세요"); return; }
-  const bId=DB.employees[selEmp].branchId||currentBranch;
+  const bId=currentBranch||empBranches(DB.employees[selEmp])[0];  // 오늘 근무 중인 지점 기준
   const entry={empId:selEmp, name:DB.employees[selEmp].name, gyeongju:g, bori:b, time:hm()};
   dbSet(`production/${bId}/${today()}/entries/${newId()}`, entry);
   document.getElementById("prodGyeongju").value="";
@@ -1015,7 +1028,7 @@ function saveStock(){
     date=document.getElementById("stockDate").value;
     if(!date){ toast("날짜를 선택해주세요"); return; }
   }
-  const bId=DB.employees[selEmp].branchId||currentBranch;
+  const bId=currentBranch||empBranches(DB.employees[selEmp])[0];  // 오늘 근무 중인 지점 기준
   const entry={empId:selEmp, name:DB.employees[selEmp].name, gyeongju:g, bori:b, time:hm()};
   dbSet(`stock/${bId}/${date}/entries/${newId()}`, entry);
   document.getElementById("stockGyeongju").value="";
@@ -1153,8 +1166,8 @@ function fillAdminBranchFilter(selId){
 }
 function empsForView(branchFilter){
   let list=activeEmps();
-  if(!isHQ(adminScope)) list=list.filter(([,e])=>e.branchId===adminScope);
-  else if(branchFilter) list=list.filter(([,e])=>e.branchId===branchFilter);
+  if(!isHQ(adminScope)) list=list.filter(([,e])=>empInBranch(e,adminScope));
+  else if(branchFilter) list=list.filter(([,e])=>empInBranch(e,branchFilter));
   return list;
 }
 function renderDaily(){
@@ -1255,13 +1268,21 @@ function fillTaskSelect(selId, cur){
     s.appendChild(o);
   });
 }
-function fillBranchSelect(selId, cur){
-  const s=document.getElementById(selId); if(!s) return; s.innerHTML="";
+function buildBranchChecks(cid, selected){
+  const c=document.getElementById(cid); if(!c) return; c.innerHTML="";
+  const sel=selected||[];
   allBranches().forEach(([id,b])=>{
-    const o=document.createElement("option"); o.value=id; o.textContent=b.name;
-    if(id===cur) o.selected=true;
-    s.appendChild(o);
+    const lb=document.createElement("label");
+    if(sel.includes(id)) lb.classList.add("on");
+    lb.innerHTML=`<input type="checkbox" value="${id}" ${sel.includes(id)?"checked":""}>${b.isHQ?"🏛":"🏪"} ${b.name}`;
+    lb.onclick=ev=>{ ev.preventDefault();
+      const inp=lb.querySelector("input"); inp.checked=!inp.checked;
+      lb.classList.toggle("on",inp.checked); };
+    c.appendChild(lb);
   });
+}
+function getBranchChecks(cid){
+  return [...document.querySelectorAll(`#${cid} input:checked`)].map(i=>i.value);
 }
 let empTabMode="cur";
 function empTab(el,which){
@@ -1273,7 +1294,7 @@ function empTab(el,which){
 }
 function renderEmpAdmin(){
   fillTaskSelect("rTask");
-  fillBranchSelect("rBranch", currentBranch);
+  if(document.getElementById("rBranch").children.length===0) buildBranchChecks("rBranch", currentBranch?[currentBranch]:[]);
   if(document.getElementById("rHours").children.length===0) buildHoursInputs("rHours",null);
   const cur=[], ret=[];
   Object.entries(DB.employees||{}).forEach(([id,e])=>(e.retired?ret:cur).push([id,e]));
@@ -1281,7 +1302,7 @@ function renderEmpAdmin(){
   document.getElementById("retCnt").textContent=ret.length;
   document.getElementById("empListCur").innerHTML = cur.length ? cur.map(([id,e])=>`
     <div class="emp-row"><div class="avatar">${e.name[0]}</div>
-      <div class="emp-info"><div class="emp-name">${e.name} <span class="chip b" style="font-size:11px">${branchName(e.branchId)}</span></div>
+      <div class="emp-info"><div class="emp-name">${e.name} ${empBranches(e).map(b=>`<span class="chip b" style="font-size:11px">${branchName(b)}</span>`).join(" ")}</div>
       <div class="emp-meta">${taskName(e.taskId)} · 입사 ${e.joinDate||"-"} · 주 ${weeklyHours(e)}시간 · 연차 ${e.leaveUnit==="hour"?"시간제":"일수제"}</div></div>
       <button class="mini-btn" onclick="openEmpEdit('${id}')">수정</button></div>`).join("")
     : '<div class="sub" style="text-align:center;padding:14px 0">등록된 직원이 없습니다. 아래에서 등록해주세요.</div>';
@@ -1367,12 +1388,14 @@ function registerEmp(){
   const pin=document.getElementById("rPin").value.trim();
   if(!name){ toast("이름을 입력해주세요"); return; }
   if(!/^\d{2,4}$/.test(pin)){ toast("비밀번호는 숫자 2~4자리로 해주세요"); return; }
+  const branchSel=getBranchChecks("rBranch");
+  if(branchSel.length===0){ toast("근무 지점을 하나 이상 선택해주세요"); return; }
   const hours=getHoursInputs("rHours");
   if(hours.reduce((a,b)=>a+b,0)===0){ toast("요일별 근무시간을 입력해주세요"); return; }
   const pay=payFromInputs("r");
   const emp={
     name, birth:document.getElementById("rBirth").value.trim()||"",
-    branchId:document.getElementById("rBranch").value||currentBranch||hqBranchId(),
+    branchIds:branchSel,
     joinDate:document.getElementById("rJoin").value||"",
     taskId:document.getElementById("rTask").value,
     hours, daysOff:hours.map((h,i)=>h===0?i:-1).filter(i=>i>=0),
@@ -1383,13 +1406,14 @@ function registerEmp(){
   dbSet("employees/"+newId(), emp);
   ["rName","rBirth","rJoin","rPin","rPayBase","rPayMeal","rPayCar","rPayAnnual","rPayHoliday","rPayPosition","rPayBonus"].forEach(id=>document.getElementById(id).value="");
   buildHoursInputs("rHours",null);
+  buildBranchChecks("rBranch", currentBranch?[currentBranch]:[]);
   toast("✅ "+name+"님 등록 완료");
 }
 let editEmpId=null;
 function openEmpEdit(id){
   editEmpId=id; const e=DB.employees[id];
   document.getElementById("eName").value=e.name;
-  fillBranchSelect("eBranch", e.branchId);
+  buildBranchChecks("eBranch", empBranches(e));
   document.getElementById("eBirth").value=e.birth||"";
   document.getElementById("eJoin").value=e.joinDate||"";
   fillTaskSelect("eTask", e.taskId);
@@ -1429,7 +1453,7 @@ function saveEmpEdit(){
   }
   const e=Object.assign({},old,{
     name:document.getElementById("eName").value.trim(),
-    branchId:document.getElementById("eBranch").value||old.branchId,
+    branchIds:(getBranchChecks("eBranch").length?getBranchChecks("eBranch"):empBranches(old)),
     birth:document.getElementById("eBirth").value.trim(),
     joinDate:document.getElementById("eJoin").value,
     taskId:document.getElementById("eTask").value,
@@ -1793,7 +1817,7 @@ function downloadLeave(){
   empsForView(document.getElementById("attBranch")?document.getElementById("attBranch").value:"").sort((a,b)=>a[1].name.localeCompare(b[1].name,"ko")).forEach(([id,emp])=>{
     emp._id=id; const c=calcLeave(emp);
     const f = c.unit==="hour"? fmtH : fmtD;
-    csv+=`${branchName(emp.branchId)},${emp.name},${emp.joinDate||""},${c.weekly},${c.unit==="hour"?"시간":"일수"},${f(c.earned)},${f(c.usedL)},${f(c.usedA)},${f(c.earned-c.usedL-c.usedA)}\n`;
+    csv+=`"${empBranchNames(emp)}",${emp.name},${emp.joinDate||""},${c.weekly},${c.unit==="hour"?"시간":"일수"},${f(c.earned)},${f(c.usedL)},${f(c.usedA)},${f(c.earned-c.usedL-c.usedA)}\n`;
   });
   dlFile(csv, `연차정리_${today().slice(0,7)}.csv`);
 }
@@ -1885,7 +1909,7 @@ function renderPay(){
     const c=calcPay(id, ym);
     const ed=(field,val)=>`<td class="editable" onclick="editDeduct('${id}','${field}')">${won(val)}</td>`;
     h+=`<tr>
-      <td class="name">${e.name}</td><td>${branchName(e.branchId)}</td><td>${genderOf(e)}</td><td>${birthOnly(e)||"-"}</td>
+      <td class="name">${e.name}</td><td>${empBranchNames(e)}</td><td>${genderOf(e)}</td><td>${birthOnly(e)||"-"}</td>
       <td>${won(c.pay.base)}</td><td>${won(c.pay.meal)}</td><td>${won(c.pay.car)}</td>
       <td>${won(c.otPay)}<br><span class="sub" style="font-size:9px">${c.otHours}h</span></td>
       <td>${won(c.pay.annual)}</td><td>${won(c.pay.holiday)}</td><td>${won(c.pay.position)}</td><td>${won(c.pay.bonus)}</td>
@@ -1958,7 +1982,7 @@ function downloadPay(){
   let csv=`\uFEFF${ym} 급여대장\n지점,이름,성별,생년월일,기본급,식비,차량유지비,초과근무수당,초과근무시간,연가수당,휴일근로수당,직책수당,성과급,급여합계,국민연금,건강보험,장기요양,고용보험,소득세,지방세,공제계,공제후총액\n`;
   emps.forEach(([id,e])=>{
     const c=calcPay(id,ym);
-    csv+=[branchName(e.branchId),e.name,genderOf(e),birthOnly(e),c.pay.base,c.pay.meal,c.pay.car,c.otPay,c.otHours,c.pay.annual,c.pay.holiday,c.pay.position,c.pay.bonus,c.gross,c.pension,c.health,c.care,c.employment,c.incometax,c.localtax,c.deduct,c.net].join(",")+"\n";
+    csv+=['"'+empBranchNames(e)+'"',e.name,genderOf(e),birthOnly(e),c.pay.base,c.pay.meal,c.pay.car,c.otPay,c.otHours,c.pay.annual,c.pay.holiday,c.pay.position,c.pay.bonus,c.gross,c.pension,c.health,c.care,c.employment,c.incometax,c.localtax,c.deduct,c.net].join(",")+"\n";
   });
   dlFile(csv, `급여대장_${ym}.csv`);
 }
