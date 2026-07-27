@@ -487,6 +487,10 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <label>요일별 근무시간 (빈칸 또는 0 = 휴무)</label>
     <div class="hour-grid" id="eHours"></div>
     <div class="sub" id="eHoursSum" style="margin-top:6px;text-align:right;font-weight:700">주 0시간</div>
+    <label>근무시간 변경 반영월 (이 달부터 새 시간 적용)</label>
+    <input type="month" id="eHoursEffMonth">
+    <div class="sub" style="font-size:12px;margin-top:4px">※ 비워두면 현재 근무시간을 그대로 수정합니다. 월을 지정하면 그 달부터 새 시간으로 계산되고 과거 달의 출근표·연차는 예전 시간 기준으로 유지됩니다.</div>
+    <button class="btn btn-ghost" style="font-size:15px;padding:11px;margin-top:8px" onclick="openHoursHistory()">📜 근무시간 변동이력 보기</button>
     <label>연차 계산 방식</label>
     <select id="eUnit">
       <option value="day">일수로 계산 (연차 1일 · 반차 0.5일 · 반반차 0.25일)</option>
@@ -524,6 +528,16 @@ table.tt th{background:#F1EDE7;font-weight:800}
     <div class="pay-table-wrap"><div id="payHistBody"></div></div>
     <div style="height:14px"></div>
     <button class="btn btn-home" onclick="closeModal('mPayHist')">닫기</button>
+  </div>
+</div>
+
+<!-- ===== 모달: 근무시간 변동이력 ===== -->
+<div class="modal-bg" id="mHoursHist">
+  <div class="modal">
+    <div class="h2" id="hoursHistTitle" style="margin-bottom:10px">근무시간 변동이력</div>
+    <div class="pay-table-wrap"><div id="hoursHistBody"></div></div>
+    <div style="height:14px"></div>
+    <button class="btn btn-home" onclick="closeModal('mHoursHist')">닫기</button>
   </div>
 </div>
 
@@ -943,7 +957,7 @@ function renderWeekCal(){
     const r=rec(dstr,selEmp)||{};
     const div=document.createElement("div");
     div.className="day"; div.textContent=d.getDate();
-    const isOff=(e.daysOff||[]).includes(d.getDay());
+    const isOff=isOffOn(e, dstr);
     if(r.leave==="연차"){div.classList.add("leave");div.innerHTML+="<small>연차</small>";}
     else if(r.leave==="반차"){div.classList.add("half");div.innerHTML+="<small>반차</small>";}
     else if(r.leave==="반반차"){div.classList.add("half");div.innerHTML+="<small>반반차</small>";}
@@ -981,7 +995,7 @@ function setLeave(type){
   // 연차/반차/반반차/대체휴무 → 차감량 확인
   const e=DB.employees[empId];
   const d=new Date(leaveDate+"T00:00:00");
-  const dayH=empHours(e)[d.getDay()]||0;
+  const dayH=hoursForDate(e, leaveDate)[d.getDay()]||0;
   const unit=e.leaveUnit||"day";
   const factor=LEAVE_FACTOR[type];
   pendingLeave={empId, date:leaveDate, type, unit, dayH};
@@ -1122,21 +1136,17 @@ function adminLoginAsk(){
 function enterAdmin(){
   admBranchFilter=null;
   updateAdminNav();
-  if(isHQ(adminScope)){
-    admGo("adm-daily",0);
-    document.getElementById("dailyDate").value=today();
-    renderDaily();
-  }else{
-    admGo("adm-prod",2);  // 지점 관리자는 생산통계부터
-  }
+  admGo("adm-daily",0);
+  document.getElementById("dailyDate").value=today();
+  renderDaily();
 }
 function updateAdminNav(){
-  // 지점 관리자(비HQ)는 생산통계·근태통계만
+  // 지점 관리자(비HQ)는 일일상황·생산통계·근태통계만 (직원·급여·지점관리는 본점만)
   const hq = isHQ(adminScope);
   document.getElementById("navEmp").style.display = hq?"":"none";
   document.getElementById("navPay").style.display = hq?"":"none";
   document.getElementById("navBranch").style.display = hq?"":"none";
-  document.getElementById("navDaily").style.display = hq?"":"none";
+  document.getElementById("navDaily").style.display = "";  // 일일상황은 모두 표시
 }
 function adminLogout(){ adminSession=false; adminScope=null; admBranchFilter=null; go("cat"); }
 function changeAdminPw(){
@@ -1193,9 +1203,11 @@ function renderDaily(){
   let html="";
   activeTasks().forEach(([id,t])=>{
     const list=byTask[id]||[];
+    if(list.length===0) return;  // 출근자 0명 업무는 표시 안 함
     html+=`<div class="daily-cat"><div class="cat-h">${TASK_ICONS[t.name]||""} ${t.name} <span class="sub">${list.length}명</span></div>
-      <div class="name-tags">${list.map(p=>`<span>${p.name} ${p.in}</span>`).join("")||'<span style="background:#F1EDE7;color:var(--sub)">없음</span>'}</div></div>`;
+      <div class="name-tags">${list.map(p=>`<span>${p.name} ${p.in}</span>`).join("")}</div></div>`;
   });
+  if(html==="") html='<div class="sub" style="text-align:center;padding:14px 0">아직 출근자가 없습니다</div>';
   document.getElementById("dailyPresent").innerHTML=html;
   // 미출근자
   const dow=d.getDay();
@@ -1204,7 +1216,7 @@ function renderDaily(){
     const r=recs[empId]||{};
     if(r.in) return;
     if(r.leave) groups[r.leave]?groups[r.leave].push({empId,e,by:r.leaveBy}):groups["미입력"].push({empId,e});
-    else if((e.daysOff||[]).includes(dow)) groups["정기휴무"].push({empId,e});
+    else if(isOffOn(e, date)) groups["정기휴무"].push({empId,e});
     else groups["미입력"].push({empId,e});
   });
   const chipCls={"연차":"b","반차":"a","반반차":"a","대체휴무":"p","병가":"r","정기휴무":"g","미입력":"a"};
@@ -1253,9 +1265,29 @@ function updateHoursSum(cid){
   if(el) el.textContent="주 "+(Math.round(sum*10)/10)+"시간";
 }
 /* 직원의 요일별 근무시간 (예전 데이터는 휴무일 제외 8시간으로 간주) */
+// 현재(최신) 근무시간
 function empHours(e){
+  const h=hoursForMonth(e, "9999-99"); // 최신
+  if(h) return h;
   if(Array.isArray(e.hours)&&e.hours.length===7) return e.hours;
   return DOW.map((_,i)=>(e.daysOff||[]).includes(i)?0:8);
+}
+// 특정 월(ym)에 적용되는 근무시간 (hoursHistory에서 from<=ym 중 최신)
+function hoursForMonth(e, ym){
+  const hist=(e.hoursHistory||[]).slice().sort((a,b)=>a.from.localeCompare(b.from));
+  let cur=null;
+  hist.forEach(h=>{ if(h.from<=ym) cur=h; });
+  if(cur) return cur.hours;
+  // 이력 없으면 기존 hours/daysOff로 폴백
+  if(Array.isArray(e.hours)&&e.hours.length===7) return e.hours;
+  return DOW.map((_,i)=>(e.daysOff||[]).includes(i)?0:8);
+}
+// 특정 날짜(YYYY-MM-DD)의 근무시간 배열
+function hoursForDate(e, dstr){ return hoursForMonth(e, dstr.slice(0,7)); }
+// 특정 날짜에 그 요일이 휴무인지
+function isOffOn(e, dstr){
+  const dow=new Date(dstr+"T00:00:00").getDay();
+  return (hoursForDate(e,dstr)[dow]||0)===0;
 }
 function weeklyHours(e){
   return Math.round(empHours(e).reduce((a,b)=>a+b,0)*10)/10;
@@ -1399,6 +1431,7 @@ function registerEmp(){
     joinDate:document.getElementById("rJoin").value||"",
     taskId:document.getElementById("rTask").value,
     hours, daysOff:hours.map((h,i)=>h===0?i:-1).filter(i=>i>=0),
+    hoursHistory:[{from:"0000-00", hours}],
     leaveUnit:document.getElementById("rUnit").value,
     payHistory:[Object.assign({from:"0000-00"}, pay)],
     pin, retired:false
@@ -1418,6 +1451,7 @@ function openEmpEdit(id){
   document.getElementById("eJoin").value=e.joinDate||"";
   fillTaskSelect("eTask", e.taskId);
   buildHoursInputs("eHours", empHours(e));
+  document.getElementById("eHoursEffMonth").value="";
   document.getElementById("eUnit").value=e.leaveUnit||"day";
   const p=currentPay(e); // 가장 최근 급여
   document.getElementById("ePayBase").value=p.base||"";
@@ -1451,6 +1485,18 @@ function saveEmpEdit(){
     hist.sort((a,b)=>a.from.localeCompare(b.from));
     hist[hist.length-1]=Object.assign({from:hist[hist.length-1].from}, pay);
   }
+  // 근무시간 이력 처리
+  const hEff=document.getElementById("eHoursEffMonth").value;
+  let hhist=(old.hoursHistory||[]).slice();
+  if(hhist.length===0) hhist=[{from:"0000-00", hours}];
+  else if(hEff){
+    hhist=hhist.filter(h=>h.from!==hEff);
+    hhist.push({from:hEff, hours});
+    hhist.sort((a,b)=>a.from.localeCompare(b.from));
+  }else{
+    hhist.sort((a,b)=>a.from.localeCompare(b.from));
+    hhist[hhist.length-1]={from:hhist[hhist.length-1].from, hours};
+  }
   const e=Object.assign({},old,{
     name:document.getElementById("eName").value.trim(),
     branchIds:(getBranchChecks("eBranch").length?getBranchChecks("eBranch"):empBranches(old)),
@@ -1458,6 +1504,7 @@ function saveEmpEdit(){
     joinDate:document.getElementById("eJoin").value,
     taskId:document.getElementById("eTask").value,
     hours, daysOff:hours.map((h,i)=>h===0?i:-1).filter(i=>i>=0),
+    hoursHistory:hhist,
     leaveUnit:document.getElementById("eUnit").value,
     payHistory:hist, pin
   });
@@ -1479,6 +1526,25 @@ function openPayHistory(){
   h+="</table>";
   document.getElementById("payHistBody").innerHTML=h;
   openModal("mPayHist");
+}
+function openHoursHistory(){
+  const e=DB.employees[editEmpId];
+  let hist=(e.hoursHistory||[]).slice();
+  if(hist.length===0 && Array.isArray(e.hours)) hist=[{from:"0000-00", hours:e.hours}];
+  hist.sort((a,b)=>a.from.localeCompare(b.from));
+  document.getElementById("hoursHistTitle").textContent=e.name+" 근무시간 변동이력";
+  if(hist.length===0){ document.getElementById("hoursHistBody").innerHTML='<div class="sub" style="padding:14px 0">등록된 근무시간 이력이 없습니다.</div>'; openModal("mHoursHist"); return; }
+  let h=`<table class="pay"><tr><th class="name">적용 시작</th><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>주간<br>합계</th></tr>`;
+  hist.forEach((rec,i)=>{
+    const from = rec.from==="0000-00" ? "최초 등록" : rec.from.replace("-",".")+"부터";
+    const hrs=rec.hours||[];
+    const sum=Math.round(hrs.reduce((a,b)=>a+(b||0),0)*10)/10;
+    const cells=hrs.map(v=>`<td>${v||"-"}</td>`).join("");
+    h+=`<tr>${i===hist.length-1?'<td class="name total">':'<td class="name">'}${from}${i===hist.length-1?" (현재)":""}</td>${cells}<td class="sum">${sum}h</td></tr>`;
+  });
+  h+="</table>";
+  document.getElementById("hoursHistBody").innerHTML=h;
+  openModal("mHoursHist");
 }
 function retireEmp(){
   const e=DB.employees[editEmpId];
@@ -1686,7 +1752,7 @@ function buildAttTable(empId, ym, editable){
     const dt=new Date(y,m-1,d);
     const dstr=ds(dt);
     const r=rec(dstr,empId)||{};
-    const isOff=(e.daysOff||[]).includes(dt.getDay());
+    const isOff=isOffOn(e, dstr);
     const past = dstr<=todayStr;
     let noteArr=(r.outings||[]).map(o=>"외출 "+o.start+(o.end?"~"+o.end:"~"));
     if(r.early) noteArr.push("조퇴 "+r.early);
@@ -1696,7 +1762,7 @@ function buildAttTable(empId, ym, editable){
       let amt="";
       if(LEAVE_FACTOR[r.leave]!=null){
         amt = unit==="hour"
-          ? `<br><span class="sub" style="font-size:10px">${r.leaveHours!=null?r.leaveHours:r1((empHours(e)[dt.getDay()]||8)*LEAVE_FACTOR[r.leave])}h</span>`
+          ? `<br><span class="sub" style="font-size:10px">${r.leaveHours!=null?r.leaveHours:r1((hoursForDate(e,dstr)[dt.getDay()]||8)*LEAVE_FACTOR[r.leave])}h</span>`
           : `<br><span class="sub" style="font-size:10px">${r.leaveDays!=null?r.leaveDays:LEAVE_FACTOR[r.leave]}일</span>`;
       }
       reason=`<span class="chip ${chipMap[r.leave]||"a"}">${r.leave}</span>${amt}`;
@@ -1725,17 +1791,35 @@ function editOt(date,empId){
 }
 function fmtD(x){ x=r2(x); return (x%1===0?x.toFixed(0):x.toFixed(2).replace(/0$/,""))+"일"; }
 function fmtH(x){ x=r1(x); return (x%1===0?x.toFixed(0):x.toFixed(1))+"시간"; }
+function weeklyHoursForMonth(e, ym){
+  const h=hoursForMonth(e, ym)||[];
+  return Math.round(h.reduce((a,b)=>a+(b||0),0)*10)/10;
+}
 function calcLeave(e){
   const unit=e.leaveUnit||"day";
-  const hrs=empHours(e), weekly=weeklyHours(e);
+  const weekly=weeklyHours(e);
   if(!e.joinDate) return {unit,weekly,earned:0,usedL:0,usedA:0,earnedDays:0};
   const join=new Date(e.joinDate), now=new Date();
   const years=(now-join)/(365.25*24*3600*1000);
   let earnedDays;
   if(years<1){ earnedDays=Math.min(11, Math.floor(years*12)); }
   else{ earnedDays=Math.min(25, 15+Math.floor((Math.floor(years)-1)/2)); }
-  const ratio=Math.min(1, weekly/40);
-  const earned = unit==="hour" ? r1(earnedDays*8*ratio) : earnedDays;
+  let earned;
+  if(unit==="hour"){
+    // 올해 각 월의 근무시간 비율을 평균내어 비례 계산
+    const y=now.getFullYear();
+    let ratioSum=0, monthsCount=0;
+    for(let m=1;m<=12;m++){
+      const ym=`${y}-${String(m).padStart(2,"0")}`;
+      const wk=weeklyHoursForMonth(e, ym);
+      ratioSum += Math.min(1, wk/40);
+      monthsCount++;
+    }
+    const avgRatio = monthsCount? ratioSum/monthsCount : Math.min(1, weekly/40);
+    earned = r1(earnedDays*8*avgRatio);
+  }else{
+    earned = earnedDays;
+  }
   // 올해 사용량 (연차·반차·반반차 = 연차 사용, 대체휴무 = 대체 사용)
   const yr=now.getFullYear()+"-";
   let usedL=0, usedA=0;
@@ -1744,7 +1828,7 @@ function calcLeave(e){
     const r=recs[e._id]; if(!r||!r.leave) return;
     const factor=LEAVE_FACTOR[r.leave]; if(factor==null) return;
     const dow=new Date(date+"T00:00:00").getDay();
-    const dayH=hrs[dow]||8;
+    const dayH=hoursForDate(e,date)[dow]||8;  // 그 시점 근무시간
     const amt = unit==="hour"
       ? (r.leaveHours!=null? r.leaveHours : dayH*factor)
       : (r.leaveDays!=null? r.leaveDays : factor);
@@ -1801,7 +1885,7 @@ function downloadAtt(){
   let csv=`\uFEFF${e.name} ${y}년 ${m}월 출근표\n날짜,출근,퇴근,휴무사유,추가근무,비고\n`;
   for(let d=1;d<=last;d++){
     const dt=new Date(y,m-1,d), dstr=ds(dt), r=rec(dstr,empId)||{};
-    const isOff=(e.daysOff||[]).includes(dt.getDay());
+    const isOff=isOffOn(e, dstr);
     let reason="";
     if(r.leave) reason=r.leave;
     else if(dstr<=today()&&!r.in&&!isOff) reason="기타(미입력)";
